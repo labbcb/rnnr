@@ -1,2 +1,1 @@
-# rnnr
-Distributed task executor for genomics research
+# Distributed task executor for genomics research

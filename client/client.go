@@ -1,0 +1,182 @@
+package client
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+
+	"github.com/labbcb/rnnr/node"
+	"github.com/labbcb/rnnr/task"
+)
+
+const contentType = "application/json"
+
+// ListTasks gets all tasks
+func ListTasks(host string) (*task.ListTasksResponse, error) {
+	resp, err := http.Get(host + "/ga4gh/tes/v1/tasks")
+	if err != nil {
+		return nil, err
+	}
+
+	var r task.ListTasksResponse
+	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
+		return nil, err
+	}
+	return &r, nil
+}
+
+// GetTask gets a task by its ID
+func GetTask(host, id string) (*task.Task, error) {
+	resp, err := http.Get(host + "/ga4gh/tes/v1/tasks/" + id)
+	if err != nil {
+		return nil, &NetworkError{err}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		var buf bytes.Buffer
+		buf.ReadFrom(resp.Body)
+		return nil, &APIError{Body: buf.String(), Status: resp.Status, StatusCode: resp.StatusCode}
+	}
+
+	var t task.Task
+	if err := json.NewDecoder(resp.Body).Decode(&t); err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+// CreateTask posts a task to be executed and return its ID
+func CreateTask(host string, t *task.Task) (string, error) {
+	// encode task to json
+	var b bytes.Buffer
+	if err := json.NewEncoder(&b).Encode(t); err != nil {
+		return "", err
+	}
+
+	// post request to TES endpoint
+	resp, err := http.Post(host+"/ga4gh/tes/v1/tasks", "application/json", &b)
+	if err != nil {
+		return "", &NetworkError{err}
+	}
+	defer resp.Body.Close()
+
+	// check status code
+	if resp.StatusCode != http.StatusCreated {
+		var buf bytes.Buffer
+		buf.ReadFrom(resp.Body)
+		return "", &APIError{Body: buf.String(), Status: resp.Status, StatusCode: resp.StatusCode}
+	}
+
+	// decode json from response body
+	var r task.CreateTaskResponse
+	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
+		return "", err
+	}
+	return r.ID, nil
+}
+
+// CancelTask cancel a task
+func CancelTask(host, id string) error {
+	resp, err := http.Post(host+"/ga4gh/tes/v1/tasks/"+id+":cancel", "application/json", nil)
+	if err != nil {
+		return &NetworkError{err}
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		var buf bytes.Buffer
+		buf.ReadFrom(resp.Body)
+		return &APIError{Body: buf.String(), Status: resp.Status, StatusCode: resp.StatusCode}
+	}
+
+	return nil
+}
+
+// Add activates a computing node on master server.
+func Add(host string, n *node.Node) (id string, err error) {
+	var b bytes.Buffer
+	if err := json.NewEncoder(&b).Encode(n); err != nil {
+		return "", fmt.Errorf("encoding node to json: %w", err)
+	}
+
+	resp, err := http.Post(host+"/nodes", contentType, &b)
+	if err != nil {
+		return "", &NetworkError{err}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		var buf bytes.Buffer
+		buf.ReadFrom(resp.Body)
+		return "", &APIError{Body: buf.String(), Status: resp.Status, StatusCode: resp.StatusCode}
+	}
+
+	var res map[string]string
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return "", fmt.Errorf("decoding node id from json: %w", err)
+	}
+
+	return res["id"], nil
+}
+
+// DisableNode deactivates a computing note on master server
+func DisableNode(host, id string) error {
+	// delete node by its id
+	c := http.Client{}
+	req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/nodes/%s", host, id), nil)
+	if err != nil {
+		return fmt.Errorf("creating node deactivation request: %w", err)
+	}
+	resp, err := c.Do(req)
+	if err != nil {
+		return &NetworkError{err}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		var buf bytes.Buffer
+		buf.ReadFrom(resp.Body)
+		return &APIError{Body: buf.String(), Status: resp.Status, StatusCode: resp.StatusCode}
+	}
+	return nil
+}
+
+// ListNodes retrieves list of registered nodes on master server
+func ListNodes(host string) ([]*node.Node, error) {
+	resp, err := http.Get(host + "/nodes")
+	if err != nil {
+		return nil, &NetworkError{err}
+	}
+	// check status code
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return nil, fmt.Errorf("%s: %s", resp.Status, string(body))
+	}
+	// decode response body
+	var ns []*node.Node
+	if err := json.NewDecoder(resp.Body).Decode(&ns); err != nil {
+		return nil, err
+	}
+	return ns, nil
+}
+
+// GetInfo retrieves server information
+func GetInfo(host string) (*node.Info, error) {
+	resp, err := http.Get(host + "/info")
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return nil, fmt.Errorf("%s: %s", resp.Status, string(body))
+	}
+
+	var i node.Info
+	if err := json.NewDecoder(resp.Body).Decode(&i); err != nil {
+		return nil, fmt.Errorf("parsing info from json: %w", err)
+	}
+	return &i, nil
+}
