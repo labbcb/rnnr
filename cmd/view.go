@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/labbcb/rnnr/client"
+	"github.com/spf13/cobra"
 )
 
 func init() {
@@ -21,7 +21,7 @@ var viewCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		t, err := client.GetTask(host, args[0])
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "Unable to list tasks:", err)
+			fmt.Fprintln(os.Stderr, "Unable to get task:", err)
 			os.Exit(1)
 		}
 		json.NewEncoder(os.Stdout).Encode(t)
