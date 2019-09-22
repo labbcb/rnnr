@@ -1,11 +1,9 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/labbcb/rnnr/client"
 	"github.com/spf13/cobra"
+	"log"
 )
 
 var stdout, stderr bool
@@ -26,8 +24,7 @@ var logsCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		t, err := client.GetTask(host, args[0])
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "Unable to list tasks:", err)
-			os.Exit(1)
+			log.Fatalf("Unable to list tasks: %v", err)
 		}
 
 		if t.Active() {
@@ -35,10 +32,10 @@ var logsCmd = &cobra.Command{
 		}
 		if stdout || stderr {
 			if stdout {
-				println(t.Logs.Logs[0].Stdout)
+				println(t.Logs.ExecutorLogs[0].Stdout)
 			}
 			if stderr {
-				println(t.Logs.Logs[0].Stderr)
+				println(t.Logs.ExecutorLogs[0].Stderr)
 			}
 		} else {
 			println(t.Logs.SystemLogs)

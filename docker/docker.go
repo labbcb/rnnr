@@ -59,7 +59,7 @@ func (d *Docker) Run(t *task.Task) error {
 		Image:      t.Executors[0].Image,
 		Cmd:        t.Executors[0].Command,
 		WorkingDir: t.Executors[0].WorkDir,
-		Env: env,
+		Env:        env,
 	}
 
 	// create Docker container
@@ -78,8 +78,8 @@ func (d *Docker) Run(t *task.Task) error {
 	// update task
 	t.State = task.Running
 	t.Logs = &task.Log{
-		Logs:      []*task.ExecutorLog{{StartTime: time.Now()}},
-		StartTime: time.Now(),
+		ExecutorLogs: []*task.ExecutorLog{{StartTime: time.Now()}},
+		StartTime:    time.Now(),
 	}
 	return nil
 }
@@ -94,7 +94,7 @@ func (d *Docker) Cancel(t *task.Task) error {
 	if err := d.client.ContainerRemove(ctx, t.ID, types.ContainerRemoveOptions{}); err != nil {
 		return err
 	}
-	t.Logs.Logs[0].EndTime = time.Now()
+	t.Logs.ExecutorLogs[0].EndTime = time.Now()
 	// update task state
 	t.Logs.EndTime = time.Now()
 	t.State = task.Canceled
@@ -136,9 +136,9 @@ func (d *Docker) Check(t *task.Task) error {
 		}
 
 		// update executor log
-		t.Logs.Logs[0].StartTime = startTime
-		t.Logs.Logs[0].EndTime = endTime
-		t.Logs.Logs[0].ExitCode = exitCode
+		t.Logs.ExecutorLogs[0].StartTime = startTime
+		t.Logs.ExecutorLogs[0].EndTime = endTime
+		t.Logs.ExecutorLogs[0].ExitCode = exitCode
 		t.Logs.EndTime = time.Now()
 	}
 	return nil
@@ -162,17 +162,15 @@ func (d *Docker) PullImage(image string, w io.Writer) error {
 
 func mounts(t *task.Task) []mount.Mount {
 	var volumes []mount.Mount
-	// output volumes
+
 	for _, input := range t.Outputs {
 		volumes = addVolume(volumes, mount.Mount{
-			Type:     mount.TypeBind,
-			Source:   filepath.Dir(input.URL),
-			Target:   filepath.Dir(input.Path),
-			ReadOnly: false,
+			Type:   mount.TypeBind,
+			Source: filepath.Dir(input.URL),
+			Target: filepath.Dir(input.Path),
 		})
 	}
 
-	// input volumes should be read-only
 	for _, input := range t.Inputs {
 		// when existing write content to file and skip bind mount
 		if input.Content != "" {

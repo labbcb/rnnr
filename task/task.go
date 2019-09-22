@@ -104,8 +104,8 @@ type OutputFileLog struct {
 
 // Log represents processing times and logs of a task
 type Log struct {
-	// Logs for each executor
-	Logs []*ExecutorLog `json:"logs,omitempty"`
+	// ExecutorLogs for each executor
+	ExecutorLogs []*ExecutorLog `json:"logs,omitempty"`
 	// Arbitrary logging metadata included by the implementation
 	Metadata map[string]string `json:"metadata,omitempty"`
 	// When the task started
