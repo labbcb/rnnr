@@ -3,8 +3,8 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/labbcb/rnnr/node"
@@ -18,6 +18,11 @@ func ListTasks(host string) (*task.ListTasksResponse, error) {
 	resp, err := http.Get(host + "/ga4gh/tes/v1/tasks")
 	if err != nil {
 		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, raiseHTTPError(resp)
 	}
 
 	var r task.ListTasksResponse
@@ -36,9 +41,7 @@ func GetTask(host, id string) (*task.Task, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		var buf bytes.Buffer
-		buf.ReadFrom(resp.Body)
-		return nil, &APIError{Body: buf.String(), Status: resp.Status, StatusCode: resp.StatusCode}
+		return nil, raiseHTTPError(resp)
 	}
 
 	var t task.Task
@@ -65,9 +68,7 @@ func CreateTask(host string, t *task.Task) (string, error) {
 
 	// check status code
 	if resp.StatusCode != http.StatusCreated {
-		var buf bytes.Buffer
-		buf.ReadFrom(resp.Body)
-		return "", &APIError{Body: buf.String(), Status: resp.Status, StatusCode: resp.StatusCode}
+		return "", raiseHTTPError(resp)
 	}
 
 	// decode json from response body
@@ -84,11 +85,10 @@ func CancelTask(host, id string) error {
 	if err != nil {
 		return &NetworkError{err}
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		var buf bytes.Buffer
-		buf.ReadFrom(resp.Body)
-		return &APIError{Body: buf.String(), Status: resp.Status, StatusCode: resp.StatusCode}
+		return raiseHTTPError(resp)
 	}
 
 	return nil
@@ -108,9 +108,7 @@ func EnableNode(host string, n *node.Node) (id string, err error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		var buf bytes.Buffer
-		buf.ReadFrom(resp.Body)
-		return "", &APIError{Body: buf.String(), Status: resp.Status, StatusCode: resp.StatusCode}
+		return "", raiseHTTPError(resp)
 	}
 
 	var res map[string]string
@@ -136,9 +134,7 @@ func DisableNode(host, id string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		var buf bytes.Buffer
-		buf.ReadFrom(resp.Body)
-		return &APIError{Body: buf.String(), Status: resp.Status, StatusCode: resp.StatusCode}
+		return raiseHTTPError(resp)
 	}
 	return nil
 }
@@ -149,10 +145,10 @@ func ListNodes(host string) ([]*node.Node, error) {
 	if err != nil {
 		return nil, &NetworkError{err}
 	}
+	defer resp.Body.Close()
 	// check status code
 	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
-		return nil, fmt.Errorf("%s: %s", resp.Status, string(body))
+		return nil, raiseHTTPError(resp)
 	}
 	// decode response body
 	var ns []*node.Node
@@ -168,10 +164,10 @@ func GetInfo(host string) (*node.Info, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
-		return nil, fmt.Errorf("%s: %s", resp.Status, string(body))
+		return nil, raiseHTTPError(resp)
 	}
 
 	var i node.Info
@@ -179,4 +175,15 @@ func GetInfo(host string) (*node.Info, error) {
 		return nil, fmt.Errorf("parsing info from json: %w", err)
 	}
 	return &i, nil
+}
+
+// new error with 'HTTP Status (Status Code): Body'
+// it doesn't close resp.Body reader
+func raiseHTTPError(resp *http.Response) error {
+	var b bytes.Buffer
+	_, err := b.ReadFrom(resp.Body)
+	if err != nil {
+		return err
+	}
+	return errors.New(fmt.Sprintf("%s: %s", resp.Status, b.String()))
 }
