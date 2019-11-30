@@ -2,28 +2,32 @@ package cmd
 
 import (
 	"encoding/json"
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/labbcb/rnnr/client"
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	viewCmd.Flags().StringVarP(&host, "host", "", "http://localhost:8080", "URL to RNNR server")
-	rootCmd.AddCommand(viewCmd)
+var viewCmd = &cobra.Command{
+	Use:     "view id...",
+	Aliases: []string{"get"},
+	Short:   "View one or more tasks",
+	Args:    cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		for _, id := range args {
+			t, err := client.GetTask(host, id)
+			if err != nil {
+				log.Println(err)
+			} else {
+				if err := json.NewEncoder(os.Stdout).Encode(t); err != nil {
+					log.Println(err)
+				}
+			}
+		}
+	},
 }
 
-var viewCmd = &cobra.Command{
-	Use:   "view",
-	Short: "View task",
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		t, err := client.GetTask(host, args[0])
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "Unable to get task:", err)
-			os.Exit(1)
-		}
-		json.NewEncoder(os.Stdout).Encode(t)
-	},
+func init() {
+	rootCmd.AddCommand(viewCmd)
 }

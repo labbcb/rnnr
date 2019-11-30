@@ -94,8 +94,8 @@ func CancelTask(host, id string) error {
 	return nil
 }
 
-// Add activates a computing node on master server.
-func Add(host string, n *node.Node) (id string, err error) {
+// EnableNode activates a computing node on master server.
+func EnableNode(host string, n *node.Node) (id string, err error) {
 	var b bytes.Buffer
 	if err := json.NewEncoder(&b).Encode(n); err != nil {
 		return "", fmt.Errorf("encoding node to json: %w", err)

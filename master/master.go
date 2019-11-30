@@ -14,14 +14,15 @@ type Master struct {
 }
 
 // New creates a server and initializes TES API and Node management endpoints.
-func New(uri string) (*Master, error) {
-	client, err := db.Connect(uri, "rnnr-master")
+// database is URI to MongoDB (without database name, which is 'rnnr-master')
+func New(database string) (*Master, error) {
+	client, err := db.Connect(database, "rnnr-master")
 	if err != nil {
 		return nil, fmt.Errorf("connecting to MongoDB: %w", err)
 	}
 
 	master := &Master{
-		Server:       server.New(client, &Remote{}),
+		Server: server.New(client, &Remote{}),
 	}
 	master.register()
 	master.Start(5 * time.Second)

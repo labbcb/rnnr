@@ -8,13 +8,6 @@ import (
 
 var stdout, stderr bool
 
-func init() {
-	logsCmd.Flags().StringVar(&host, "host", "http://localhost:8080", "URL to RNNR server")
-	logsCmd.Flags().BoolVar(&stdout, "stdout", false, "Prints Task.Executor standard out")
-	logsCmd.Flags().BoolVar(&stderr, "stderr", false, "Prints Task.Executor standard error")
-	rootCmd.AddCommand(logsCmd)
-}
-
 var logsCmd = &cobra.Command{
 	Use:   "logs",
 	Short: "Task logs",
@@ -41,4 +34,10 @@ var logsCmd = &cobra.Command{
 			println(t.Logs.SystemLogs)
 		}
 	},
+}
+
+func init() {
+	logsCmd.Flags().BoolVar(&stdout, "stdout", false, "Prints Task.Executor standard out")
+	logsCmd.Flags().BoolVar(&stderr, "stderr", false, "Prints Task.Executor standard error")
+	rootCmd.AddCommand(logsCmd)
 }

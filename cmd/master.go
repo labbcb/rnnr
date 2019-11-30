@@ -1,31 +1,25 @@
 package cmd
 
 import (
-	"fmt"
-	"net/http"
-	"os"
-
-	"github.com/spf13/cobra"
 	"github.com/labbcb/rnnr/master"
+	"github.com/spf13/cobra"
+	"log"
+	"net/http"
 )
 
-func init() {
-	masterCmd.Flags().StringVar(&masterDb, "database", "mongodb://localhost:27017", "URL to Mongo database")
-	masterCmd.Flags().StringVar(&masterAddr, "address", ":8080", "Addres to bind server")
-	rootCmd.AddCommand(masterCmd)
+var masterCmd = &cobra.Command{
+	Use:     "master",
+	Aliases: []string{"server"},
+	Short:   "Start RNNR master server",
+	Run: func(cmd *cobra.Command, args []string) {
+		m, err := master.New(database)
+		fatalOnErr(err)
+		log.Fatal(http.ListenAndServe(address, m.Server.Router))
+	},
 }
 
-var masterDb string
-var masterAddr string
-var masterCmd = &cobra.Command{
-	Use:   "master",
-	Short: "Start RNNR master server",
-	Run: func(cmd *cobra.Command, args []string) {
-		m, err := master.New(masterDb)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "Unable to start master server:", err)
-			os.Exit(1)
-		}
-		http.ListenAndServe(masterAddr, m.Server.Router)
-	},
+func init() {
+	masterCmd.Flags().StringVar(&database, "database", "mongodb://localhost:27017", "URL to Mongo database")
+	masterCmd.Flags().StringVar(&address, "address", ":8080", "Address to bind server")
+	rootCmd.AddCommand(masterCmd)
 }

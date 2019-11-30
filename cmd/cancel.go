@@ -1,24 +1,25 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
 	"github.com/labbcb/rnnr/client"
+	"github.com/spf13/cobra"
 	"log"
 )
 
-func init() {
-	cancelCmd.Flags().StringVar(&host, "host", "http://localhost:8080", "URL to RNNR server")
-	rootCmd.AddCommand(cancelCmd)
-}
-
 var cancelCmd = &cobra.Command{
-	Use:   "cancel",
-	Short: "Cancel a task",
-	Args:  cobra.ExactArgs(1),
+	Use:     "cancel id...",
+	Aliases: []string{"abort", "stop"},
+	Short:   "Cancel one or more tasks",
+	Args:    cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		id := args[0]
-		if err := client.CancelTask(host, id); err != nil {
-			log.Fatalf("Unable to cancel task %s: %v\n", id, err)
+		for _, id := range args {
+			if err := client.CancelTask(host, id); err != nil {
+				log.Printf("Unable to cancel task %s: %v\n", id, err)
+			}
 		}
 	},
+}
+
+func init() {
+	rootCmd.AddCommand(cancelCmd)
 }
