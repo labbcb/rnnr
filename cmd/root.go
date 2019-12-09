@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var database, address, cfgFile, host string
+var database, address, cfgFile string
 
 var rootCmd = &cobra.Command{
 	Use:   "rnnr",
@@ -29,7 +29,8 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default $HOME/.rnnr.yaml)")
-	rootCmd.PersistentFlags().StringVar(&host, "host", "http://localhost:8080", "RNNR server URL")
+	rootCmd.PersistentFlags().String("host", "http://localhost:8080", "RNNR server URL")
+	viper.BindPFlag("host", rootCmd.PersistentFlags().Lookup("host"))
 }
 
 // initConfig reads in config file and ENV variables if set.

@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/labbcb/rnnr/client"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"log"
 )
 
@@ -15,6 +16,7 @@ var logsCmd = &cobra.Command{
 	Use --stdout and --stderr to get Task.Log.ExecutorLogs.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		host := viper.GetString("host")
 		t, err := client.GetTask(host, args[0])
 		if err != nil {
 			log.Fatalf("Unable to list tasks: %v", err)

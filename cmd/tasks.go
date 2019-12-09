@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/labbcb/rnnr/client"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var tasksCmd = &cobra.Command{
@@ -11,6 +12,7 @@ var tasksCmd = &cobra.Command{
 	Aliases: []string{"ls", "list"},
 	Short:   "List tasks",
 	Run: func(cmd *cobra.Command, args []string) {
+		host := viper.GetString("host")
 		resp, err := client.ListTasks(host)
 		fatalOnErr(err)
 		for _, t := range resp.Tasks {

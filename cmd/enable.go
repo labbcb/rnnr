@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/spf13/viper"
 	"log"
 
 	"github.com/labbcb/rnnr/client"
@@ -21,6 +22,7 @@ var enableCmd = &cobra.Command{
 	This command can be used to change the maximum resources without restarting the worker node.`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		host := viper.GetString("host")
 		for _, url := range args {
 			n := &node.Node{
 				Host: url,

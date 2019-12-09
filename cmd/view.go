@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"github.com/spf13/viper"
 	"log"
 	"os"
 
@@ -15,6 +16,7 @@ var viewCmd = &cobra.Command{
 	Short:   "View one or more tasks",
 	Args:    cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		host := viper.GetString("host")
 		for _, id := range args {
 			t, err := client.GetTask(host, id)
 			if err != nil {
