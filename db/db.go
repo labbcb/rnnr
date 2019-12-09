@@ -70,23 +70,23 @@ func (d *DB) FindByState(states ...task.State) ([]*task.Task, error) {
 func (d *DB) FindAll() ([]*task.Task, error) {
 	var ts []*task.Task
 	cur, err := d.client.Database(d.database).Collection(TaskCollection).Find(nil, bson.D{{}}, options.Find())
-	defer cur.Close(nil)
 	if err != nil {
 		return nil, err
 	}
+	defer cur.Close(nil)
 	if err := cur.All(nil, &ts); err != nil {
 		return nil, err
 	}
 	return ts, nil
 }
 
-// All returns all nodes
+// GetAllNodes returns all nodes
 func (d *DB) All() ([]*node.Node, error) {
 	cur, err := d.client.Database(d.database).Collection(NodeCollection).Find(nil, bson.D{{}}, options.Find())
-	defer cur.Close(nil)
 	if err != nil {
 		return nil, err
 	}
+	defer cur.Close(nil)
 	var ns []*node.Node
 	if err := cur.All(nil, &ns); err != nil {
 		return nil, err
@@ -130,14 +130,14 @@ func (d *DB) Add(n *node.Node) error {
 	}
 }
 
-// UpdateUsage update usage of node.
+// UpdateNodesWorkload update usage of node.
 func (d *DB) UpdateUsage(n *node.Node) error {
 	return d.client.Database(d.database).Collection(NodeCollection).
 		FindOneAndUpdate(nil, bson.M{"_id": n.ID}, bson.M{"$set": bson.M{"usage": n.Usage}}, options.FindOneAndUpdate()).Err()
 }
 
-// Active returns active computing nodes.
-func (d *DB) Active() ([]*node.Node, error) {
+// GetActiveNodes returns active computing nodes.
+func (d *DB) GetActiveNodes() ([]*node.Node, error) {
 	cur, err := d.client.Database(d.database).Collection(NodeCollection).Find(nil, bson.M{"active": true})
 	if err != nil {
 		return nil, err

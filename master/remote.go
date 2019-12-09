@@ -58,7 +58,7 @@ func (r *Remote) Check(t *task.Task) error {
 	return nil
 }
 
-// Cancel request task cancelation to node and keep requesting remote task until its state is changed.
+// Cancel request task cancellation to node and keep requesting remote task until its state is changed.
 func (r *Remote) Cancel(t *task.Task) error {
 	if !t.Active() {
 		return fmt.Errorf("task %s is not active, it is %s", t.ID, t.State)

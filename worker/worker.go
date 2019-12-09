@@ -2,6 +2,8 @@ package worker
 
 import (
 	"fmt"
+	"github.com/labbcb/rnnr/task"
+	"log"
 	"runtime"
 	"time"
 
@@ -17,6 +19,39 @@ import (
 type Worker struct {
 	*server.Server
 	Info *node.Info
+}
+
+// InitializeAndRunTasks will iterate over queued tasks initializing and executing them.
+func (w *Worker) InitializeAndRunTasks() error {
+	ts, err := w.DB.FindByState(task.Queued)
+	if err != nil {
+		return fmt.Errorf("could not get queued tasks: %w", err)
+	}
+
+	for _, t := range ts {
+		t.State = task.Initializing
+		if err := w.DB.Update(t); err != nil {
+			log.Printf("could not update state of task %s: %v", t.ID, err)
+		}
+
+		log.Println(t)
+		go w.RunTask(t)
+	}
+
+	return nil
+}
+
+func (w *Worker) CheckTasks() error {
+	runningTasks, err := w.DB.FindByState(task.Running)
+	if err != nil {
+		return fmt.Errorf("getting running tasks: %w", err)
+	}
+
+	for _, t := range runningTasks {
+		go w.CheckTask(t)
+	}
+
+	return nil
 }
 
 // New creates a standalone worker server and initializes TES API endpoints.
@@ -48,6 +83,50 @@ func New(uri string, cpuCores int, ramGb float64) (*Worker, error) {
 	}
 
 	worker.register()
-	worker.Start(5 * time.Second)
+	go worker.StartMonitor(5 * time.Second)
 	return worker, nil
+}
+
+func (w *Worker) StartMonitor(sleepTime time.Duration) {
+	for {
+		if err := w.InitializeAndRunTasks(); err != nil {
+			log.Println(err)
+		}
+
+		if err := w.CheckTasks(); err != nil {
+			log.Println(err)
+		}
+
+		time.Sleep(sleepTime)
+	}
+}
+
+func (w *Worker) RunTask(t *task.Task) {
+	if err := w.Runner.Run(t); err != nil {
+		log.Println(err)
+		t.State = task.ExecutorError
+		t.Logs = &task.Log{}
+		t.Logs.EndTime = time.Now()
+		t.Logs.SystemLogs = append(t.Logs.SystemLogs, err.Error())
+	}
+	if err := w.DB.Update(t); err != nil {
+		log.Println("unable to update task:", err)
+	}
+	log.Println(t)
+}
+
+func (w *Worker) CheckTask(t *task.Task) {
+	if err := w.Runner.Check(t); err != nil {
+		log.Println(err)
+		t.State = task.ExecutorError
+		t.Logs = &task.Log{}
+		t.Logs.EndTime = time.Now()
+		t.Logs.SystemLogs = append(t.Logs.SystemLogs, err.Error())
+	}
+	if err := w.DB.Update(t); err != nil {
+		log.Println("unable to update task:", err)
+	}
+	if t.State != task.Running {
+		log.Println(t)
+	}
 }

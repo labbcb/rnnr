@@ -133,8 +133,9 @@ type Task struct {
 	Logs         *Log              `json:"logs,omitempty"`
 	CreationTime time.Time         `json:"creation_time"`
 
-	RemoteHost   string `json:"-"`
-	RemoteTaskID string `json:"-"`
+	// These fields extend TES API allowing client to know which node is processing the task.
+	RemoteHost   string `json:"remote_host"`
+	RemoteTaskID string `json:"remote_task_id"`
 }
 
 // ListTasksResponse represents a list of tasks previous submitted to system
@@ -168,7 +169,7 @@ const (
 	Full View = "FULL"
 )
 
-// Active returns true if task state is
+// GetActiveNodes returns true if task state is
 // - Queued
 // - Initializing
 // - Running

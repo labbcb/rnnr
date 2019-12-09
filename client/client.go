@@ -158,8 +158,8 @@ func ListNodes(host string) ([]*node.Node, error) {
 	return ns, nil
 }
 
-// GetInfo retrieves server information
-func GetInfo(host string) (*node.Info, error) {
+// GetNodeInfo retrieves server information
+func GetNodeInfo(host string) (*node.Info, error) {
 	resp, err := http.Get(host + "/info")
 	if err != nil {
 		return nil, err

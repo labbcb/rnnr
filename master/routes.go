@@ -18,12 +18,19 @@ func (m *Master) register() {
 
 func (m *Master) handleListNodes() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ns, err := m.All()
+		ns, err := m.GetAllNodes()
 		if err != nil {
 			log.Println(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		if err := m.UpdateNodesWorkload(ns); err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		// encode nodes to json
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(&ns); err != nil {

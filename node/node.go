@@ -5,14 +5,16 @@ import (
 )
 
 // Node is a computing node that accepts and executes tasks.
-// It has maximun allowed (Info) and real-time allocated computing resources (Usage).
+// It has maximum allowed (Info) and real-time allocated computing resources (Usage).
 // Host is used as its unique identifier.
 type Node struct {
 	ID     string `json:"id" bson:"_id"`
 	Host   string `json:"host"`
 	Active bool   `json:"active"`
 	Info   *Info  `json:"info"`
-	Usage  *Usage `json:"usage"`
+
+	// Usage keeps real-time allocated resources in memory. It is not stored in database.
+	Usage *Usage `json:"usage" bson:"-"`
 }
 
 // Info has the maximum computing resources.
