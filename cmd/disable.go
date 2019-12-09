@@ -8,9 +8,10 @@ import (
 )
 
 var disableCmd = &cobra.Command{
-	Use:   "remove url...",
-	Short: "Remove one or more computing nodes",
-	Args:  cobra.MinimumNArgs(1),
+	Use:     "disable url...",
+	Aliases: []string{"remove", "rm"},
+	Short:   "Remove one or more computing nodes",
+	Args:    cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		host := viper.GetString("host")
 		for _, id := range args {
