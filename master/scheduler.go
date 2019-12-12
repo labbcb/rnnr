@@ -112,7 +112,6 @@ func (m *Master) Request(resources *task.Resources) (*node.Node, error) {
 	var bestNode *node.Node
 	var bestNodeScore float64
 	for _, n := range nodes {
-		fmt.Println(n)
 		// Calculate how many resources the given node will have if selected for processing this task.
 		// If one of these values is less than zero the node is skipped.
 		cpu := n.Info.CPUCores - n.Usage.CPUCores - resources.CPUCores
@@ -124,7 +123,6 @@ func (m *Master) Request(resources *task.Resources) (*node.Node, error) {
 		// Calculate score of a given node.
 		// Higher the value more free resource the node has.
 		score := float64(cpu) + memory
-		log.Println("node", n.Host, "score", score)
 		if score >= bestNodeScore {
 			bestNode = n
 			bestNodeScore = score

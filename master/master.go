@@ -111,7 +111,7 @@ func (m *Master) RunTask(t *task.Task) {
 
 // RunTasks will iterate over initializing tasks and starting them concurrently.
 func (m *Master) RunTasks() error {
-	initializingTasks, err := m.DB.FindByState(task.Queued)
+	initializingTasks, err := m.DB.FindByState(task.Initializing)
 	if err != nil {
 		return fmt.Errorf("could not get initializing tasks: %w", err)
 	}

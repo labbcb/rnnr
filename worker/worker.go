@@ -21,39 +21,6 @@ type Worker struct {
 	Info *node.Info
 }
 
-// InitializeAndRunTasks will iterate over queued tasks initializing and executing them.
-func (w *Worker) InitializeAndRunTasks() error {
-	ts, err := w.DB.FindByState(task.Queued)
-	if err != nil {
-		return fmt.Errorf("could not get queued tasks: %w", err)
-	}
-
-	for _, t := range ts {
-		t.State = task.Initializing
-		if err := w.DB.Update(t); err != nil {
-			log.Printf("could not update state of task %s: %v", t.ID, err)
-		}
-
-		log.Println(t)
-		go w.RunTask(t)
-	}
-
-	return nil
-}
-
-func (w *Worker) CheckTasks() error {
-	runningTasks, err := w.DB.FindByState(task.Running)
-	if err != nil {
-		return fmt.Errorf("getting running tasks: %w", err)
-	}
-
-	for _, t := range runningTasks {
-		go w.CheckTask(t)
-	}
-
-	return nil
-}
-
 // New creates a standalone worker server and initializes TES API endpoints.
 // If cpuCores of ramGb is zero then the function will guess the maximum values.
 func New(uri string, cpuCores int, ramGb float64) (*Worker, error) {
@@ -99,6 +66,39 @@ func (w *Worker) StartMonitor(sleepTime time.Duration) {
 
 		time.Sleep(sleepTime)
 	}
+}
+
+// InitializeAndRunTasks will iterate over queued tasks initializing and executing them.
+func (w *Worker) InitializeAndRunTasks() error {
+	ts, err := w.DB.FindByState(task.Queued)
+	if err != nil {
+		return fmt.Errorf("could not get queued tasks: %w", err)
+	}
+
+	for _, t := range ts {
+		t.State = task.Initializing
+		if err := w.DB.Update(t); err != nil {
+			log.Printf("could not update state of task %s: %v", t.ID, err)
+		}
+
+		log.Println(t)
+		go w.RunTask(t)
+	}
+
+	return nil
+}
+
+func (w *Worker) CheckTasks() error {
+	runningTasks, err := w.DB.FindByState(task.Running)
+	if err != nil {
+		return fmt.Errorf("getting running tasks: %w", err)
+	}
+
+	for _, t := range runningTasks {
+		go w.CheckTask(t)
+	}
+
+	return nil
 }
 
 func (w *Worker) RunTask(t *task.Task) {
