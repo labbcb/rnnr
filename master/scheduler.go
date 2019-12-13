@@ -30,6 +30,14 @@ func (m *Master) Activate(n *node.Node) error {
 		return fmt.Errorf("unable to get info of node %s: %w", n.Host, err)
 	}
 
+	if n.Info.CPUCores != 0 {
+		info.CPUCores = n.Info.CPUCores
+	}
+
+	if n.Info.RAMGb != 0 {
+		info.RAMGb = n.Info.RAMGb
+	}
+
 	id, err := uuid.NewRandom()
 	if err != nil {
 		return fmt.Errorf("unable to generate node id: %w", err)
