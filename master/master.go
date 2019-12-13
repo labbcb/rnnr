@@ -157,10 +157,15 @@ func (m *Master) CheckTask(t *task.Task) {
 			log.Println(err)
 		}
 	}
-	if err := m.DB.Update(t); err != nil {
-		log.Println("unable to update task:", err)
-	}
+
 	if t.State != task.Running {
 		log.Println(t)
+	}
+
+	if t.State == task.ExecutorError {
+		t.State = task.Queued
+	}
+	if err := m.DB.Update(t); err != nil {
+		log.Println("unable to update task:", err)
 	}
 }
