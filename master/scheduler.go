@@ -70,7 +70,11 @@ func (m *Master) Deactivate(id string) error {
 			continue
 		}
 
-		go m.Runner.Cancel(t)
+		go func() {
+			if err := m.Runner.Cancel(t); err != nil {
+				log.Println(err)
+			}
+		}()
 	}
 
 	log.Println(n)
