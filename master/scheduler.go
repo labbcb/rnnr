@@ -122,7 +122,7 @@ func (m *Master) Request(resources *task.Resources) (*node.Node, error) {
 
 		// Calculate score of a given node.
 		// Higher the value more free resource the node has.
-		score := float64(cpu) + memory
+		score := float64(cpu)*1.5 + memory
 		if score >= bestNodeScore {
 			bestNode = n
 			bestNodeScore = score
