@@ -15,10 +15,10 @@ var tasksCmd = &cobra.Command{
 		host := viper.GetString("host")
 		resp, err := client.ListTasks(host)
 		fatalOnErr(err)
-		fmt.Printf("%-36s  %-18s   %-14s   %s\n", "Task ID", "Resources", "State", "Name (Server)")
+		fmt.Printf("%-36s   %-18s   %-14s   %s\n", "Task ID", "Resources", "State", "Name")
 
 		for _, t := range resp.Tasks {
-			fmt.Printf("%36s | CPU=%02d RAM=%05.2fGB | %-14s | %s (%s)\n",
+			fmt.Printf("%36s | CPU=%02d RAM=%05.2fGB | %-14s | %s at %s\n",
 				t.ID, t.Resources.CPUCores, t.Resources.RAMGb, t.State, t.Name, t.RemoteHost)
 		}
 	},
