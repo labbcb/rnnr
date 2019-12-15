@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"github.com/labbcb/rnnr/task"
+	"github.com/labbcb/rnnr/models"
 )
 
 func (s *Server) register() {
@@ -20,7 +20,7 @@ func (s *Server) register() {
 
 func (s *Server) handleCreateTask() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var t task.Task
+		var t models.Task
 		if err := json.NewDecoder(r.Body).Decode(&t); err != nil {
 			log.Println("decoding task from json:", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -35,7 +35,7 @@ func (s *Server) handleCreateTask() http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		if err := json.NewEncoder(w).Encode(&task.CreateTaskResponse{ID: t.ID}); err != nil {
+		if err := json.NewEncoder(w).Encode(&models.CreateTaskResponse{ID: t.ID}); err != nil {
 			log.Println("encoding response to json:", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -60,7 +60,7 @@ func (s *Server) handleListTasks() http.HandlerFunc {
 		// call service to get all tasks
 		vars := mux.Vars(r)
 		pageSize, _ := strconv.Atoi(vars["pageSize"])
-		ts, err := s.List(vars["namePrefix"], pageSize, vars["pageToken"], task.View(vars["view"]))
+		ts, err := s.List(vars["namePrefix"], pageSize, vars["pageToken"], models.View(vars["view"]))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -76,7 +76,7 @@ func (s *Server) handleCancelTask() http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		encodeJSON(w, new(task.CancelTaskResponse))
+		encodeJSON(w, new(models.CancelTaskResponse))
 	}
 }
 

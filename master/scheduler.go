@@ -7,8 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labbcb/rnnr/client"
-	"github.com/labbcb/rnnr/node"
-	"github.com/labbcb/rnnr/task"
+	"github.com/labbcb/rnnr/models"
 )
 
 // NoActiveNodes error is returned when there is no active node for processing tasks remotely.
@@ -24,7 +23,7 @@ type NoEnoughResources struct {
 // Activate adds computing note after requesting its information with available resources.
 // If the node is already registered it is activated keeping the previous ID but updating information.
 // Usage information is reset.
-func (m *Master) Activate(n *node.Node) error {
+func (m *Master) Activate(n *models.Node) error {
 	info, err := client.GetNodeInfo(n.Host)
 	if err != nil {
 		return fmt.Errorf("unable to get info of node %s: %w", n.Host, err)
@@ -45,7 +44,7 @@ func (m *Master) Activate(n *node.Node) error {
 	n.ID = id.String()
 	n.Info = info
 	n.Active = true
-	n.Usage = &node.Usage{}
+	n.Usage = &models.Usage{}
 	if err := m.DB.Add(n); err != nil {
 		return fmt.Errorf("unable to add node %s, %w", n.Host, err)
 	}
@@ -64,12 +63,12 @@ func (m *Master) Deactivate(id string) error {
 	}
 
 	n.Active = false
-	n.Usage = &node.Usage{}
+	n.Usage = &models.Usage{}
 	if err := m.DB.UpdateNode(n); err != nil {
 		return fmt.Errorf("unable to update disabled node %s: %w", id, err)
 	}
 
-	ts, err := m.DB.FindByState(task.Initializing, task.Running, task.Paused)
+	ts, err := m.DB.FindByState(models.Initializing, models.Running, models.Paused)
 	if err != nil {
 		return fmt.Errorf("unable to get tasks from node %s: %w", n.Host, err)
 	}
@@ -91,7 +90,7 @@ func (m *Master) Deactivate(id string) error {
 }
 
 // GetAllNodes returns all computing node (deactivated included).
-func (m *Master) GetAllNodes() ([]*node.Node, error) {
+func (m *Master) GetAllNodes() ([]*models.Node, error) {
 	ns, err := m.DB.All()
 	if err != nil {
 		return nil, fmt.Errorf("unable to get all nodes: %w", err)
@@ -103,7 +102,7 @@ func (m *Master) GetAllNodes() ([]*node.Node, error) {
 // If there is no active node it returns NoActiveNodes error.
 // If there is some active node but none of them is able to process then it returns NoEnoughResources error.
 // Once found a node it will update in database.
-func (m *Master) Request(resources *task.Resources) (*node.Node, error) {
+func (m *Master) Request(resources *models.Resources) (*models.Node, error) {
 	// Get active computing nodes.
 	nodes, err := m.DB.GetActiveNodes()
 	if err != nil {
@@ -121,10 +120,10 @@ func (m *Master) Request(resources *task.Resources) (*node.Node, error) {
 	// Get best node for the requested computing resources.
 	// The selected node should have enough CPU and Memory available.
 	// The node with most free resources available is selected.
-	var bestNode *node.Node
+	var bestNode *models.Node
 	var bestNodeScore float64
 	for _, n := range nodes {
-		// Calculate how many resources the given node will have if selected for processing this task.
+		// Calculate how many resources the given node will have if selected for processing this models.
 		// If one of these values is less than zero the node is skipped.
 		cpu := n.Info.CPUCores - n.Usage.CPUCores - resources.CPUCores
 		memory := n.Info.RAMGb - n.Usage.RAMGb - resources.RAMGb
@@ -149,16 +148,16 @@ func (m *Master) Request(resources *task.Resources) (*node.Node, error) {
 }
 
 // UpdateNodesWorkload gets active tasks (Initializing or Running) and update node usage.
-func (m *Master) UpdateNodesWorkload(nodes []*node.Node) error {
-	usage := make(map[string]*node.Usage)
-	ts, err := m.DB.FindByState(task.Initializing, task.Running)
+func (m *Master) UpdateNodesWorkload(nodes []*models.Node) error {
+	usage := make(map[string]*models.Usage)
+	ts, err := m.DB.FindByState(models.Initializing, models.Running)
 	if err != nil {
 		return fmt.Errorf("getting initializing/running tasks: %w", err)
 	}
 	for _, t := range ts {
 		_, ok := usage[t.RemoteHost]
 		if !ok {
-			usage[t.RemoteHost] = &node.Usage{}
+			usage[t.RemoteHost] = &models.Usage{}
 		}
 		usage[t.RemoteHost].Tasks++
 		usage[t.RemoteHost].CPUCores += t.Resources.CPUCores
@@ -168,7 +167,7 @@ func (m *Master) UpdateNodesWorkload(nodes []*node.Node) error {
 	for _, n := range nodes {
 		_, ok := usage[n.Host]
 		if !ok {
-			usage[n.Host] = &node.Usage{}
+			usage[n.Host] = &models.Usage{}
 		}
 		n.Usage = usage[n.Host]
 	}

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/labbcb/rnnr/client"
 	"github.com/labbcb/rnnr/db"
-	"github.com/labbcb/rnnr/task"
+	"github.com/labbcb/rnnr/models"
 	"log"
 	"time"
 
@@ -55,7 +55,7 @@ func (m *Master) StartMonitor(sleepTime time.Duration) {
 // If node has free computing resources enough function will assign the node to this task and
 // the task state will be set as initializing.
 func (m *Master) InitializeTasks() error {
-	queuedTasks, err := m.DB.FindByState(task.Queued)
+	queuedTasks, err := m.DB.FindByState(models.Queued)
 	if err != nil {
 		log.Println("could not get queued tasks:", err)
 	}
@@ -64,15 +64,15 @@ func (m *Master) InitializeTasks() error {
 		switch err.(type) {
 		case nil:
 			t.RemoteHost = n.Host
-			t.State = task.Initializing
+			t.State = models.Initializing
 			if err := m.DB.Update(t); err != nil {
-				log.Println("unable to update task:", err)
+				log.Println("unable to update models:", err)
 			}
 			log.Println(t)
 		case NoActiveNodes:
 		case NoEnoughResources:
 		default:
-			return fmt.Errorf("could not request resources for task %s: %w", t.ID, err)
+			return fmt.Errorf("could not request resources for models %s: %w", t.ID, err)
 		}
 	}
 
@@ -82,7 +82,7 @@ func (m *Master) InitializeTasks() error {
 // RunTask will check computing node and delegate task execution to the node.
 // If node is not active or not responding them the task will be put as queued.
 // Node will be disabled if not responding.
-func (m *Master) RunTask(t *task.Task) {
+func (m *Master) RunTask(t *models.Task) {
 	n, err := m.DB.GetByHost(t.RemoteHost)
 	if err != nil {
 		log.Println("unable to get node by host:", err)
@@ -100,18 +100,18 @@ func (m *Master) RunTask(t *task.Task) {
 			log.Println(err)
 		}
 	} else {
-		t.State = task.Queued
+		t.State = models.Queued
 	}
-	// Update task state.
+	// Update task state
 	if err := m.DB.Update(t); err != nil {
-		log.Println("unable to update task:", err)
+		log.Println("unable to update models:", err)
 	}
 	log.Println(t)
 }
 
 // RunTasks will iterate over initializing tasks and starting them concurrently.
 func (m *Master) RunTasks() error {
-	initializingTasks, err := m.DB.FindByState(task.Initializing)
+	initializingTasks, err := m.DB.FindByState(models.Initializing)
 	if err != nil {
 		return fmt.Errorf("could not get initializing tasks: %w", err)
 	}
@@ -126,7 +126,7 @@ func (m *Master) RunTasks() error {
 // CheckTasks will iterate over running tasks checking if they have been completed well or not.
 // It runs concurrently.
 func (m *Master) CheckTasks() error {
-	runningTasks, err := m.DB.FindByState(task.Running)
+	runningTasks, err := m.DB.FindByState(models.Running)
 	if err != nil {
 		return fmt.Errorf("getting running tasks: %w", err)
 	}
@@ -139,14 +139,14 @@ func (m *Master) CheckTasks() error {
 }
 
 // CheckTask will check is a given tasks has been completed.
-func (m *Master) CheckTask(t *task.Task) {
+func (m *Master) CheckTask(t *models.Task) {
 	n, err := m.DB.GetByHost(t.RemoteHost)
 	if err != nil {
 		log.Println("unable to get node by host:", err)
 		return
 	}
 	if !n.Active {
-		t.State = task.Queued
+		t.State = models.Queued
 	} else {
 		if err := m.Runner.Check(t); err != nil {
 			if _, ok := errors.Unwrap(err).(*client.NetworkError); ok {
@@ -158,14 +158,14 @@ func (m *Master) CheckTask(t *task.Task) {
 		}
 	}
 
-	if t.State != task.Running {
+	if t.State != models.Running {
 		log.Println(t)
 	}
 
-	if t.State == task.ExecutorError {
-		t.State = task.Queued
+	if t.State == models.ExecutorError {
+		t.State = models.Queued
 	}
 	if err := m.DB.Update(t); err != nil {
-		log.Println("unable to update task:", err)
+		log.Println("unable to update models:", err)
 	}
 }

@@ -14,7 +14,7 @@ var cfgFile string
 
 var rootCmd = &cobra.Command{
 	Use:   "rnnr",
-	Short: "Distributed task executor for genomic research",
+	Short: "Distributed task executor for genomics research",
 }
 
 // Execute calls root command

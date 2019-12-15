@@ -2,11 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/labbcb/rnnr/models"
 	"github.com/spf13/viper"
 	"log"
 
 	"github.com/labbcb/rnnr/client"
-	"github.com/labbcb/rnnr/node"
 	"github.com/spf13/cobra"
 )
 
@@ -24,9 +24,9 @@ var enableCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		host := viper.GetString("host")
 		for _, url := range args {
-			n := &node.Node{
+			n := &models.Node{
 				Host: url,
-				Info: &node.Info{
+				Info: &models.Info{
 					CPUCores: cpuCores,
 					RAMGb:    ramGb,
 				},

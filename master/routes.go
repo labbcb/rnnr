@@ -2,11 +2,11 @@ package master
 
 import (
 	"encoding/json"
+	"github.com/labbcb/rnnr/models"
 	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/labbcb/rnnr/node"
 )
 
 // Register binds endpoints for node management
@@ -43,7 +43,7 @@ func (m *Master) handleListNodes() http.HandlerFunc {
 
 func (m *Master) handleActivateNode() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var n node.Node
+		var n models.Node
 		if err := json.NewDecoder(r.Body).Decode(&n); err != nil {
 			log.Println("decoding request body to json:", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)

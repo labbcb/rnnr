@@ -1,9 +1,9 @@
 package server
 
-import "github.com/labbcb/rnnr/task"
+import "github.com/labbcb/rnnr/models"
 
 type Runner interface {
-	Run(*task.Task) error
-	Check(*task.Task) error
-	Cancel(*task.Task) error
+	Run(*models.Task) error
+	Check(*models.Task) error
+	Cancel(*models.Task) error
 }

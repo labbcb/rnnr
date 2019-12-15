@@ -1,8 +1,7 @@
 package db
 
 import (
-	"github.com/labbcb/rnnr/node"
-	"github.com/labbcb/rnnr/task"
+	"github.com/labbcb/rnnr/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -31,14 +30,14 @@ func Connect(uri, database string) (*DB, error) {
 }
 
 // Save stores a task
-func (d *DB) Save(t *task.Task) error {
+func (d *DB) Save(t *models.Task) error {
 	_, err := d.client.Database(d.database).Collection(TaskCollection).InsertOne(nil, t)
 	return err
 }
 
 // Get finds a task by its ID
-func (d *DB) Get(id string) (*task.Task, error) {
-	var t task.Task
+func (d *DB) Get(id string) (*models.Task, error) {
+	var t models.Task
 	if err := d.client.Database(d.database).Collection(TaskCollection).FindOne(nil, bson.M{"_id": id}).Decode(&t); err != nil {
 		return nil, err
 	}
@@ -46,14 +45,14 @@ func (d *DB) Get(id string) (*task.Task, error) {
 }
 
 // Update saves task changes in database
-func (d *DB) Update(t *task.Task) error {
+func (d *DB) Update(t *models.Task) error {
 	return d.client.Database(d.database).Collection(TaskCollection).
 		FindOneAndReplace(nil, bson.M{"_id": t.ID}, &t, options.FindOneAndReplace()).Err()
 }
 
 // FindByState returns tasks that matches states
-func (d *DB) FindByState(states ...task.State) ([]*task.Task, error) {
-	var ts []*task.Task
+func (d *DB) FindByState(states ...models.State) ([]*models.Task, error) {
+	var ts []*models.Task
 	filter := bson.M{"state": bson.M{"$in": states}}
 	cur, err := d.client.Database(d.database).Collection(TaskCollection).Find(nil, filter, options.Find())
 	if err != nil {
@@ -67,8 +66,8 @@ func (d *DB) FindByState(states ...task.State) ([]*task.Task, error) {
 }
 
 // FindAll returns all tasks stored in database
-func (d *DB) FindAll() ([]*task.Task, error) {
-	var ts []*task.Task
+func (d *DB) FindAll() ([]*models.Task, error) {
+	var ts []*models.Task
 	cur, err := d.client.Database(d.database).Collection(TaskCollection).Find(nil, bson.D{{}}, options.Find())
 	if err != nil {
 		return nil, err
@@ -81,13 +80,13 @@ func (d *DB) FindAll() ([]*task.Task, error) {
 }
 
 // GetAllNodes returns all nodes
-func (d *DB) All() ([]*node.Node, error) {
+func (d *DB) All() ([]*models.Node, error) {
 	cur, err := d.client.Database(d.database).Collection(NodeCollection).Find(nil, bson.D{{}}, options.Find())
 	if err != nil {
 		return nil, err
 	}
 	defer cur.Close(nil)
-	var ns []*node.Node
+	var ns []*models.Node
 	if err := cur.All(nil, &ns); err != nil {
 		return nil, err
 	}
@@ -95,8 +94,8 @@ func (d *DB) All() ([]*node.Node, error) {
 }
 
 // GetByHost retrieves a computing node by its server address.
-func (d *DB) GetByHost(host string) (*node.Node, error) {
-	var n node.Node
+func (d *DB) GetByHost(host string) (*models.Node, error) {
+	var n models.Node
 	if err := d.client.Database(d.database).Collection(NodeCollection).
 		FindOne(nil, bson.M{"host": host}).Decode(&n); err != nil {
 		return nil, err
@@ -105,8 +104,8 @@ func (d *DB) GetByHost(host string) (*node.Node, error) {
 }
 
 // GetByID retrieves a computing node by its ID.
-func (d *DB) GetByID(host string) (*node.Node, error) {
-	var n node.Node
+func (d *DB) GetByID(host string) (*models.Node, error) {
+	var n models.Node
 	if err := d.client.Database(d.database).Collection(NodeCollection).
 		FindOne(nil, bson.M{"_id": host}).Decode(&n); err != nil {
 		return nil, err
@@ -115,7 +114,7 @@ func (d *DB) GetByID(host string) (*node.Node, error) {
 }
 
 // Add activates a node. If already registered it updates node fields with same ID.
-func (d *DB) Add(n *node.Node) error {
+func (d *DB) Add(n *models.Node) error {
 	existing, err := d.GetByHost(n.Host)
 
 	switch err {
@@ -131,18 +130,18 @@ func (d *DB) Add(n *node.Node) error {
 }
 
 // UpdateNodesWorkload update usage of node.
-func (d *DB) UpdateUsage(n *node.Node) error {
+func (d *DB) UpdateUsage(n *models.Node) error {
 	return d.client.Database(d.database).Collection(NodeCollection).
 		FindOneAndUpdate(nil, bson.M{"_id": n.ID}, bson.M{"$set": bson.M{"usage": n.Usage}}, options.FindOneAndUpdate()).Err()
 }
 
 // GetActiveNodes returns active computing nodes.
-func (d *DB) GetActiveNodes() ([]*node.Node, error) {
+func (d *DB) GetActiveNodes() ([]*models.Node, error) {
 	cur, err := d.client.Database(d.database).Collection(NodeCollection).Find(nil, bson.M{"active": true})
 	if err != nil {
 		return nil, err
 	}
-	var ns []*node.Node
+	var ns []*models.Node
 	if err := cur.All(nil, &ns); err != nil {
 		return nil, err
 	}
@@ -150,7 +149,7 @@ func (d *DB) GetActiveNodes() ([]*node.Node, error) {
 }
 
 // UpdateNode updates node information.
-func (d *DB) UpdateNode(n *node.Node) error {
+func (d *DB) UpdateNode(n *models.Node) error {
 	return d.client.Database(d.database).Collection(NodeCollection).
 		FindOneAndReplace(nil, bson.M{"_id": n.ID}, n, options.FindOneAndReplace()).Err()
 }

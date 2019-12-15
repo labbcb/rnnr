@@ -2,7 +2,7 @@ package worker
 
 import (
 	"fmt"
-	"github.com/labbcb/rnnr/task"
+	"github.com/labbcb/rnnr/models"
 	"log"
 	"runtime"
 	"time"
@@ -10,7 +10,6 @@ import (
 	"github.com/labbcb/rnnr/db"
 
 	"github.com/labbcb/rnnr/docker"
-	"github.com/labbcb/rnnr/node"
 	"github.com/labbcb/rnnr/server"
 	"github.com/pbnjay/memory"
 )
@@ -18,7 +17,7 @@ import (
 // Worker server is a standalone task executor that can be connected with a Master server.
 type Worker struct {
 	*server.Server
-	Info *node.Info
+	Info *models.Info
 }
 
 // New creates a standalone worker server and initializes TES API endpoints.
@@ -43,7 +42,7 @@ func New(uri string, cpuCores int, ramGb float64) (*Worker, error) {
 
 	worker := &Worker{
 		Server: server.New(client, rnnr),
-		Info: &node.Info{
+		Info: &models.Info{
 			CPUCores: cpuCores,
 			RAMGb:    ramGb,
 		},
@@ -70,13 +69,13 @@ func (w *Worker) StartMonitor(sleepTime time.Duration) {
 
 // InitializeAndRunTasks will iterate over queued tasks initializing and executing them.
 func (w *Worker) InitializeAndRunTasks() error {
-	ts, err := w.DB.FindByState(task.Queued)
+	ts, err := w.DB.FindByState(models.Queued)
 	if err != nil {
 		return fmt.Errorf("could not get queued tasks: %w", err)
 	}
 
 	for _, t := range ts {
-		t.State = task.Initializing
+		t.State = models.Initializing
 		if err := w.DB.Update(t); err != nil {
 			log.Printf("could not update state of task %s: %v", t.ID, err)
 		}
@@ -89,7 +88,7 @@ func (w *Worker) InitializeAndRunTasks() error {
 }
 
 func (w *Worker) CheckTasks() error {
-	runningTasks, err := w.DB.FindByState(task.Running)
+	runningTasks, err := w.DB.FindByState(models.Running)
 	if err != nil {
 		return fmt.Errorf("getting running tasks: %w", err)
 	}
@@ -101,11 +100,11 @@ func (w *Worker) CheckTasks() error {
 	return nil
 }
 
-func (w *Worker) RunTask(t *task.Task) {
+func (w *Worker) RunTask(t *models.Task) {
 	if err := w.Runner.Run(t); err != nil {
 		log.Println(err)
-		t.State = task.ExecutorError
-		t.Logs = &task.Log{}
+		t.State = models.ExecutorError
+		t.Logs = &models.Log{}
 		t.Logs.EndTime = time.Now()
 		t.Logs.SystemLogs = append(t.Logs.SystemLogs, err.Error())
 	}
@@ -115,18 +114,18 @@ func (w *Worker) RunTask(t *task.Task) {
 	log.Println(t)
 }
 
-func (w *Worker) CheckTask(t *task.Task) {
+func (w *Worker) CheckTask(t *models.Task) {
 	if err := w.Runner.Check(t); err != nil {
 		log.Println(err)
-		t.State = task.ExecutorError
-		t.Logs = &task.Log{}
+		t.State = models.ExecutorError
+		t.Logs = &models.Log{}
 		t.Logs.EndTime = time.Now()
 		t.Logs.SystemLogs = append(t.Logs.SystemLogs, err.Error())
 	}
 	if err := w.DB.Update(t); err != nil {
 		log.Println("unable to update task:", err)
 	}
-	if t.State != task.Running {
+	if t.State != models.Running {
 		log.Println(t)
 	}
 }

@@ -16,7 +16,7 @@ var cancelCmd = &cobra.Command{
 		host := viper.GetString("host")
 		for _, id := range args {
 			if err := client.CancelTask(host, id); err != nil {
-				log.Printf("Unable to cancel task %s: %v\n", id, err)
+				log.Printf("Unable to cancel models %s: %v\n", id, err)
 			}
 		}
 	},

@@ -15,7 +15,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
-	"github.com/labbcb/rnnr/task"
+	"github.com/labbcb/rnnr/models"
 )
 
 // Docker wraps Docker client to provide task-related operations
@@ -33,7 +33,7 @@ func Connect() (*Docker, error) {
 }
 
 // Run creates a Docker container and execute it
-func (d *Docker) Run(t *task.Task) error {
+func (d *Docker) Run(t *models.Task) error {
 	// check how many executors have been submitted
 	switch len(t.Executors) {
 	case 0:
@@ -76,16 +76,16 @@ func (d *Docker) Run(t *task.Task) error {
 	}
 
 	// update task
-	t.State = task.Running
-	t.Logs = &task.Log{
-		ExecutorLogs: []*task.ExecutorLog{{StartTime: time.Now()}},
+	t.State = models.Running
+	t.Logs = &models.Log{
+		ExecutorLogs: []*models.ExecutorLog{{StartTime: time.Now()}},
 		StartTime:    time.Now(),
 	}
 	return nil
 }
 
 // Cancel stops and removes a running Docker container
-func (d *Docker) Cancel(t *task.Task) error {
+func (d *Docker) Cancel(t *models.Task) error {
 	// create context
 	ctx := context.Background()
 	if err := d.client.ContainerStop(ctx, t.ID, nil); err != nil {
@@ -95,16 +95,16 @@ func (d *Docker) Cancel(t *task.Task) error {
 		return err
 	}
 	t.Logs.ExecutorLogs[0].EndTime = time.Now()
-	// update task state
+	// update models state
 	t.Logs.EndTime = time.Now()
-	t.State = task.Canceled
+	t.State = models.Canceled
 	return nil
 }
 
 // Check inspect a running Docker container if still running.
-func (d *Docker) Check(t *task.Task) error {
-	// do not update task when it is not running
-	if t.State != task.Running {
+func (d *Docker) Check(t *models.Task) error {
+	// do not update models when it is not running
+	if t.State != models.Running {
 		return nil
 	}
 	// create context
@@ -130,9 +130,9 @@ func (d *Docker) Check(t *task.Task) error {
 		exitCode := json.State.ExitCode
 		if exitCode != 0 {
 			// signals that some of the executors did not terminated ok
-			t.State = task.ExecutorError
+			t.State = models.ExecutorError
 		} else {
-			t.State = task.Complete
+			t.State = models.Complete
 		}
 
 		// update executor log
@@ -160,7 +160,7 @@ func (d *Docker) PullImage(image string, w io.Writer) error {
 	return nil
 }
 
-func mounts(t *task.Task) []mount.Mount {
+func mounts(t *models.Task) []mount.Mount {
 	var volumes []mount.Mount
 
 	for _, input := range t.Outputs {

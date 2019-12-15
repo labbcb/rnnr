@@ -7,14 +7,13 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/labbcb/rnnr/node"
-	"github.com/labbcb/rnnr/task"
+	"github.com/labbcb/rnnr/models"
 )
 
 const contentType = "application/json"
 
 // ListTasks gets all tasks
-func ListTasks(host string) (*task.ListTasksResponse, error) {
+func ListTasks(host string) (*models.ListTasksResponse, error) {
 	resp, err := http.Get(host + "/ga4gh/tes/v1/tasks")
 	if err != nil {
 		return nil, err
@@ -25,7 +24,7 @@ func ListTasks(host string) (*task.ListTasksResponse, error) {
 		return nil, raiseHTTPError(resp)
 	}
 
-	var r task.ListTasksResponse
+	var r models.ListTasksResponse
 	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
 		return nil, err
 	}
@@ -33,7 +32,7 @@ func ListTasks(host string) (*task.ListTasksResponse, error) {
 }
 
 // GetTask gets a task by its ID
-func GetTask(host, id string) (*task.Task, error) {
+func GetTask(host, id string) (*models.Task, error) {
 	resp, err := http.Get(host + "/ga4gh/tes/v1/tasks/" + id)
 	if err != nil {
 		return nil, &NetworkError{err}
@@ -44,16 +43,16 @@ func GetTask(host, id string) (*task.Task, error) {
 		return nil, raiseHTTPError(resp)
 	}
 
-	var t task.Task
+	var t models.Task
 	if err := json.NewDecoder(resp.Body).Decode(&t); err != nil {
 		return nil, err
 	}
 	return &t, nil
 }
 
-// CreateTask posts a task to be executed and return its ID
-func CreateTask(host string, t *task.Task) (string, error) {
-	// encode task to json
+// CreateTask submits a task to be executed and return its ID
+func CreateTask(host string, t *models.Task) (string, error) {
+	// encode models to json
 	var b bytes.Buffer
 	if err := json.NewEncoder(&b).Encode(t); err != nil {
 		return "", err
@@ -72,14 +71,14 @@ func CreateTask(host string, t *task.Task) (string, error) {
 	}
 
 	// decode json from response body
-	var r task.CreateTaskResponse
+	var r models.CreateTaskResponse
 	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
 		return "", err
 	}
 	return r.ID, nil
 }
 
-// CancelTask cancel a task
+// CancelTask cancels a task
 func CancelTask(host, id string) error {
 	resp, err := http.Post(host+"/ga4gh/tes/v1/tasks/"+id+":cancel", "application/json", nil)
 	if err != nil {
@@ -95,7 +94,7 @@ func CancelTask(host, id string) error {
 }
 
 // EnableNode activates a computing node on master server.
-func EnableNode(host string, n *node.Node) (id string, err error) {
+func EnableNode(host string, n *models.Node) (id string, err error) {
 	var b bytes.Buffer
 	if err := json.NewEncoder(&b).Encode(n); err != nil {
 		return "", fmt.Errorf("encoding node to json: %w", err)
@@ -140,7 +139,7 @@ func DisableNode(host, id string) error {
 }
 
 // ListNodes retrieves list of registered nodes on master server
-func ListNodes(host string) ([]*node.Node, error) {
+func ListNodes(host string) ([]*models.Node, error) {
 	resp, err := http.Get(host + "/nodes")
 	if err != nil {
 		return nil, &NetworkError{err}
@@ -151,7 +150,7 @@ func ListNodes(host string) ([]*node.Node, error) {
 		return nil, raiseHTTPError(resp)
 	}
 	// decode response body
-	var ns []*node.Node
+	var ns []*models.Node
 	if err := json.NewDecoder(resp.Body).Decode(&ns); err != nil {
 		return nil, err
 	}
@@ -159,7 +158,7 @@ func ListNodes(host string) ([]*node.Node, error) {
 }
 
 // GetNodeInfo retrieves server information
-func GetNodeInfo(host string) (*node.Info, error) {
+func GetNodeInfo(host string) (*models.Info, error) {
 	resp, err := http.Get(host + "/info")
 	if err != nil {
 		return nil, err
@@ -170,7 +169,7 @@ func GetNodeInfo(host string) (*node.Info, error) {
 		return nil, raiseHTTPError(resp)
 	}
 
-	var i node.Info
+	var i models.Info
 	if err := json.NewDecoder(resp.Body).Decode(&i); err != nil {
 		return nil, fmt.Errorf("parsing info from json: %w", err)
 	}

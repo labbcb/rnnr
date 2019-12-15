@@ -1,4 +1,4 @@
-package task
+package models
 
 import (
 	"fmt"

@@ -1,4 +1,4 @@
-package task
+package models
 
 // ServiceInfo describes information about the service, such as storage details, resource availability, and other documentation.
 type ServiceInfo struct {
