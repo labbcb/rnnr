@@ -101,6 +101,7 @@ func (m *Master) RunTask(t *models.Task) {
 		}
 	} else {
 		t.State = models.Queued
+		t.RemoteHost = ""
 	}
 	// Update task state
 	if err := m.DB.Update(t); err != nil {
@@ -147,6 +148,7 @@ func (m *Master) CheckTask(t *models.Task) {
 	}
 	if !n.Active {
 		t.State = models.Queued
+		t.RemoteHost = ""
 	} else {
 		if err := m.Runner.Check(t); err != nil {
 			if _, ok := errors.Unwrap(err).(*client.NetworkError); ok {
@@ -162,9 +164,6 @@ func (m *Master) CheckTask(t *models.Task) {
 		log.Println(t)
 	}
 
-	if t.State == models.ExecutorError {
-		t.State = models.Queued
-	}
 	if err := m.DB.Update(t); err != nil {
 		log.Println("unable to update models:", err)
 	}

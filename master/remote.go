@@ -18,6 +18,7 @@ func (r *Remote) Run(t *models.Task) error {
 	if err != nil {
 		if _, ok := err.(*client.NetworkError); ok {
 			t.State = models.Queued
+			t.RemoteHost = ""
 		} else {
 			t.State = models.ExecutorError
 			t.Logs = &models.Log{}
@@ -38,6 +39,7 @@ func (r *Remote) Check(t *models.Task) error {
 	if err != nil {
 		if _, ok := err.(*client.NetworkError); ok {
 			t.State = models.Queued
+			t.RemoteHost = ""
 		} else {
 			t.State = models.ExecutorError
 			t.Logs = &models.Log{}
@@ -64,14 +66,7 @@ func (r *Remote) Cancel(t *models.Task) error {
 		return fmt.Errorf("models %s is not active, it is %s", t.ID, t.State)
 	}
 
-	if t.State == models.Queued {
-		t.State = models.Canceled
-		t.Logs = &models.Log{}
-		t.Logs.EndTime = time.Now()
-		return nil
-	}
-
-	if t.State == models.Initializing {
+	if t.State == models.Queued || t.State == models.Initializing {
 		t.State = models.Canceled
 		t.Logs = &models.Log{}
 		t.Logs.EndTime = time.Now()
