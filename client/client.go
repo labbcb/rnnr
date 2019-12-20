@@ -14,7 +14,7 @@ const contentType = "application/json"
 
 // ListTasks gets all tasks
 func ListTasks(host string) (*models.ListTasksResponse, error) {
-	resp, err := http.Get(host + "/ga4gh/tes/v1/tasks")
+	resp, err := http.Get(host + "/tasks")
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +33,7 @@ func ListTasks(host string) (*models.ListTasksResponse, error) {
 
 // GetTask gets a task by its ID
 func GetTask(host, id string) (*models.Task, error) {
-	resp, err := http.Get(host + "/ga4gh/tes/v1/tasks/" + id)
+	resp, err := http.Get(host + "/tasks/" + id)
 	if err != nil {
 		return nil, &NetworkError{err}
 	}
@@ -59,7 +59,7 @@ func CreateTask(host string, t *models.Task) (string, error) {
 	}
 
 	// post request to TES endpoint
-	resp, err := http.Post(host+"/ga4gh/tes/v1/tasks", "application/json", &b)
+	resp, err := http.Post(host+"/tasks", "application/json", &b)
 	if err != nil {
 		return "", &NetworkError{err}
 	}
@@ -80,7 +80,7 @@ func CreateTask(host string, t *models.Task) (string, error) {
 
 // CancelTask cancels a task
 func CancelTask(host, id string) error {
-	resp, err := http.Post(host+"/ga4gh/tes/v1/tasks/"+id+":cancel", "application/json", nil)
+	resp, err := http.Post(host+"/tasks/"+id+":cancel", "application/json", nil)
 	if err != nil {
 		return &NetworkError{err}
 	}
