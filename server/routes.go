@@ -11,11 +11,11 @@ import (
 )
 
 func (s *Server) register() {
-	s.Router.HandleFunc("/ga4gh/tes/v1/tasks", s.handleListTasks()).Methods(http.MethodGet)
-	s.Router.HandleFunc("/ga4gh/tes/v1/tasks", s.handleCreateTask()).Methods(http.MethodPost)
-	s.Router.HandleFunc("/ga4gh/tes/v1/tasks/{id}", s.handleGetTask()).Methods(http.MethodGet)
-	s.Router.HandleFunc("/ga4gh/tes/v1/tasks/{id}:cancel", s.handleCancelTask()).Methods(http.MethodPost)
-	s.Router.HandleFunc("/ga4gh/tes/v1/tasks/service-info", s.handleGetServiceInfo()).Methods(http.MethodGet)
+	s.Router.HandleFunc("/tasks", s.handleListTasks()).Methods(http.MethodGet)
+	s.Router.HandleFunc("/tasks", s.handleCreateTask()).Methods(http.MethodPost)
+	s.Router.HandleFunc("/tasks/{id}", s.handleGetTask()).Methods(http.MethodGet)
+	s.Router.HandleFunc("/tasks/{id}:cancel", s.handleCancelTask()).Methods(http.MethodPost)
+	s.Router.HandleFunc("/tasks/service-info", s.handleGetServiceInfo()).Methods(http.MethodGet)
 }
 
 func (s *Server) handleCreateTask() http.HandlerFunc {
