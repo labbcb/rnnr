@@ -205,3 +205,31 @@ func addVolume(volumes []mount.Mount, v mount.Mount) []mount.Mount {
 
 	return append(volumes, v)
 }
+
+//func (d *Docker) Deploy(port int, volume string, mode, version string) error {
+//	image := "welliton/rnnr:" + version
+//	if err := d.PullImage(image, os.Stderr); err != nil {
+//		return err
+//	}
+//
+//	mounts := []mount.Mount{{
+//		Source: "/var/run/docker.sock",
+//		Target: "/var/run/docker.sock",
+//	}, {
+//		Source: volume,
+//		Target: volume,
+//	}}
+//
+//	resp, err := d.client.ContainerCreate(
+//		context.Background(),
+//		&container.Config{Image: image, Cmd: []string{"rnnr", mode}},
+//		&container.HostConfig{Mounts: mounts},
+//		nil, mode)
+//	if err != nil {
+//		return err
+//	}
+//
+//	if err := d.client.ContainerStart(context.Background(), resp.ID, types.ContainerStartOptions{}); err != nil {
+//		return err
+//	}
+//}

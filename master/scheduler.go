@@ -22,7 +22,6 @@ type NoEnoughResources struct {
 
 // Activate adds computing note after requesting its information with available resources.
 // If the node is already registered it is activated keeping the previous ID but updating information.
-// Usage information is reset.
 func (m *Master) Activate(n *models.Node) error {
 	info, err := client.GetNodeInfo(n.Host)
 	if err != nil {
@@ -44,7 +43,6 @@ func (m *Master) Activate(n *models.Node) error {
 	n.ID = id.String()
 	n.Info = info
 	n.Active = true
-	n.Usage = &models.Usage{}
 	if err := m.DB.Add(n); err != nil {
 		return fmt.Errorf("unable to add node %s, %w", n.Host, err)
 	}

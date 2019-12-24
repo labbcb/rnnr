@@ -132,7 +132,7 @@ func (d *DB) Add(n *models.Node) error {
 // UpdateNodesWorkload update usage of node.
 func (d *DB) UpdateUsage(n *models.Node) error {
 	return d.client.Database(d.database).Collection(NodeCollection).
-		FindOneAndUpdate(nil, bson.M{"_id": n.ID}, bson.M{"$set": bson.M{"usage": n.Usage}}, options.FindOneAndUpdate()).Err()
+		FindOneAndUpdate(nil, bson.M{"_id": n.ID}, bson.M{"$set": bson.M{"info": n.Info}}, options.FindOneAndUpdate()).Err()
 }
 
 // GetActiveNodes returns active computing nodes.
