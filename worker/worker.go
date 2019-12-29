@@ -2,7 +2,9 @@ package worker
 
 import (
 	"context"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/labbcb/rnnr/docker"
 	"github.com/labbcb/rnnr/pb"
 	"github.com/pbnjay/memory"
@@ -10,6 +12,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"runtime"
+	"time"
 )
 
 type Worker struct {
@@ -18,7 +21,7 @@ type Worker struct {
 }
 
 func New(cpuCores int32, ramGb float64) (*Worker, error) {
-	rnnr, err := docker.Connect()
+	conn, err := docker.Connect()
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +34,7 @@ func New(cpuCores int32, ramGb float64) (*Worker, error) {
 	}
 
 	worker := &Worker{
-		Docker: rnnr,
+		Docker: conn,
 		Info: &pb.Info{
 			CpuCores: cpuCores,
 			RamGb:    ramGb,
@@ -63,7 +66,8 @@ func (w *Worker) CheckContainer(ctx context.Context, container *pb.Container) (*
 	}
 
 	if state.Exited {
-		log.WithFields(log.Fields{"id": container.Id, "exitCode": state.ExitCode}).Info("Container exited.")
+		elapsed := asTime(state.End).Sub(asTime(state.Start))
+		log.WithFields(log.Fields{"id": container.Id, "exitCode": state.ExitCode, "elapsed": elapsed}).Info("Container exited.")
 	}
 
 	return state, nil
@@ -77,4 +81,9 @@ func (w *Worker) StopContainer(ctx context.Context, container *pb.Container) (*e
 
 	log.WithFields(log.Fields{"id": container.Id}).Info("Stopped container.")
 	return &empty.Empty{}, nil
+}
+
+func asTime(p *timestamp.Timestamp) time.Time {
+	t, _ := ptypes.Timestamp(p)
+	return t
 }

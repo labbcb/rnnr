@@ -217,7 +217,8 @@ func (m *Master) CheckTask(task *models.Task) {
 	}
 
 	if task.State != models.Running {
-		log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost, "state": task.State}).Info("Task finished.")
+		elapsed := task.Logs.EndTime.Sub(task.Logs.StartTime)
+		log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost, "state": task.State, "elapsed": elapsed}).Info("Task finished.")
 	}
 
 	if err := m.DB.UpdateTask(task); err != nil {

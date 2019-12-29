@@ -2,7 +2,6 @@ package master
 
 import (
 	"context"
-	"fmt"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -51,7 +50,6 @@ func RemoteRun(task *models.Task, node *models.Node) error {
 			task.Logs = &models.Log{}
 			task.Logs.EndTime = time.Now()
 			task.Logs.SystemLogs = append(task.Logs.SystemLogs, err.Error())
-			fmt.Printf("run %v\n", err)
 		} else {
 			task.State = models.Queued
 			task.RemoteHost = ""

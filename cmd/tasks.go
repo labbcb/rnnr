@@ -6,6 +6,7 @@ import (
 	"github.com/labbcb/rnnr/models"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"time"
 )
 
 var all bool
@@ -20,24 +21,28 @@ var tasksCmd = &cobra.Command{
 		resp, err := client.ListTasks(host)
 		fatalOnErr(err)
 
-		if len(resp.Tasks) == 0 {
-			return
-		}
-
 		fmt.Printf("%-36s   %-18s   %-14s   %s\n", "Task ID", "Resources", "State", "Name")
 
-		var name string
-		for _, t := range resp.Tasks {
-			if !(all || t.State == models.Queued || t.State == models.Running) {
+		var desc string
+		for _, task := range resp.Tasks {
+			if !(all || task.State == models.Queued || task.State == models.Running) {
 				continue
 			}
-			if t.RemoteHost != "" {
-				name = t.Name + " at " + t.RemoteHost
+			if task.RemoteHost != "" {
+				desc = task.Name + " at " + task.RemoteHost
 			} else {
-				name = t.Name
+				desc = task.Name
+			}
+
+			switch task.State {
+			case models.Queued:
+			case models.Running:
+				desc = fmt.Sprintf("%s (%s)", desc, time.Since(task.Logs.StartTime))
+			default:
+				desc = fmt.Sprintf("%s (%s)", desc, task.Logs.EndTime.Sub(task.Logs.StartTime))
 			}
 			fmt.Printf("%36s | CPU=%02d RAM=%05.2fGB | %-14s | %s\n",
-				t.ID, t.Resources.CPUCores, t.Resources.RAMGb, t.State, name)
+				task.ID, task.Resources.CPUCores, task.Resources.RAMGb, task.State, desc)
 		}
 	},
 }
