@@ -2,15 +2,15 @@ package cmd
 
 import (
 	"github.com/labbcb/rnnr/client"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"log"
 )
 
 var cancelCmd = &cobra.Command{
 	Use:     "cancel id...",
 	Aliases: []string{"abort", "stop"},
-	Short:   "Cancel one or more tasks",
+	Short:   "Stop one or more tasks",
 	Args:    cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		host := viper.GetString("host")

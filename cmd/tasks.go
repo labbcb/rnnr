@@ -13,12 +13,17 @@ var all bool
 var tasksCmd = &cobra.Command{
 	Use:     "tasks",
 	Aliases: []string{"ls", "list"},
-	Short:   "List tasks",
+	Short:   "ListTasks tasks",
 	Long:    "It will print only QUEUED and RUNNING tasks by default.",
 	Run: func(cmd *cobra.Command, args []string) {
 		host := viper.GetString("host")
 		resp, err := client.ListTasks(host)
 		fatalOnErr(err)
+
+		if len(resp.Tasks) == 0 {
+			return
+		}
+
 		fmt.Printf("%-36s   %-18s   %-14s   %s\n", "Task ID", "Resources", "State", "Name")
 
 		var name string

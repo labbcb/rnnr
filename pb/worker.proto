@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+package pb;
+
+message Info {
+    int32 cpu_cores = 1;
+    double ram_gb = 2;
+}
+
+message Volume {
+    string host_path = 1;
+    string container_path = 2;
+}
+
+message State {
+    bool exited = 1;
+    int32 exit_code = 2;
+    google.protobuf.Timestamp start = 3;
+    google.protobuf.Timestamp end = 4;
+    string stdout = 5;
+    string stderr = 6;
+}
+
+message Container {
+    string id = 1;
+    string image = 2;
+    repeated string command = 3;
+    string work_dir = 4;
+    repeated Volume outputs = 5;
+    repeated Volume inputs = 6;
+    map<string, string> env = 7;
+}
+
+service Worker {
+    rpc GetInfo (google.protobuf.Empty) returns (Info);
+    rpc RunContainer (Container) returns (google.protobuf.Empty);
+    rpc CheckContainer (Container) returns (State);
+    rpc StopContainer (Container) returns (google.protobuf.Empty);
+}

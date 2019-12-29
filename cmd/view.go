@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"encoding/json"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"log"
 	"os"
 
 	"github.com/labbcb/rnnr/client"

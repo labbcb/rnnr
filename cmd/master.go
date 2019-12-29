@@ -2,26 +2,27 @@ package cmd
 
 import (
 	"github.com/labbcb/rnnr/master"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	"log"
 	"net/http"
 )
+
+var database, address string
 
 var masterCmd = &cobra.Command{
 	Use:     "master",
 	Aliases: []string{"server"},
 	Short:   "StartMonitor RNNR master server",
 	Run: func(cmd *cobra.Command, args []string) {
-		database := viper.GetString("database")
 		m, err := master.New(database)
 		fatalOnErr(err)
 
-		address := viper.GetString("address")
-		log.Fatal(http.ListenAndServe(address, m.Server.Router))
+		log.Fatal(http.ListenAndServe(address, m.Router))
 	},
 }
 
 func init() {
+	masterCmd.PersistentFlags().StringVarP(&database, "database", "d", "mongodb://localhost:27017", "URL to Mongo database")
+	masterCmd.PersistentFlags().StringVarP(&address, "address", "a", ":8080", "Address to bind server")
 	rootCmd.AddCommand(masterCmd)
 }

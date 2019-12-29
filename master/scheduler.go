@@ -3,11 +3,8 @@ package master
 import (
 	"errors"
 	"fmt"
-	"log"
-
-	"github.com/google/uuid"
-	"github.com/labbcb/rnnr/client"
 	"github.com/labbcb/rnnr/models"
+	log "github.com/sirupsen/logrus"
 )
 
 // NoActiveNodes error is returned when there is no active node for processing tasks remotely.
@@ -20,102 +17,100 @@ type NoEnoughResources struct {
 	error
 }
 
-// Activate adds computing note after requesting its information with available resources.
-// If the node is already registered it is activated keeping the previous ID but updating information.
-func (m *Master) Activate(n *models.Node) error {
-	info, err := client.GetNodeInfo(n.Host)
+func (m *Master) EnableNode(node *models.Node) error {
+	maxCpu, maxRamGb, err := GetNodeResources(node)
 	if err != nil {
-		return fmt.Errorf("unable to get info of node %s: %w", n.Host, err)
+		return err
 	}
 
-	if n.Info.CPUCores != 0 {
-		info.CPUCores = n.Info.CPUCores
+	if node.CPUCores == 0 || node.CPUCores > maxCpu {
+		node.CPUCores = maxCpu
 	}
 
-	if n.Info.RAMGb != 0 {
-		info.RAMGb = n.Info.RAMGb
+	if node.RAMGb != 0 || node.RAMGb > maxRamGb {
+		node.RAMGb = maxRamGb
 	}
 
-	id, err := uuid.NewRandom()
-	if err != nil {
-		return fmt.Errorf("unable to generate node id: %w", err)
+	node.Active = true
+	node.Usage = &models.Usage{}
+	if err := m.DB.AddNodes(node); err != nil {
+		return err
 	}
-	n.ID = id.String()
-	n.Info = info
-	n.Active = true
-	if err := m.DB.Add(n); err != nil {
-		return fmt.Errorf("unable to add node %s, %w", n.Host, err)
-	}
-
-	log.Println(n)
 
 	return nil
 }
 
-// Deactivate updates node availability removing usage information.
+// DisableNode updates node availability removing usage information.
 // Also cancels remote tasks and put them to queue.
-func (m *Master) Deactivate(id string) error {
-	n, err := m.DB.GetByID(id)
+func (m *Master) DisableNode(host string) error {
+	node, err := m.DB.GetNode(host)
 	if err != nil {
-		return fmt.Errorf("unable to get node %s: %w", id, err)
+		return err
 	}
 
-	n.Active = false
-	n.Usage = &models.Usage{}
-	if err := m.DB.UpdateNode(n); err != nil {
-		return fmt.Errorf("unable to update disabled node %s: %w", id, err)
+	node.Active = false
+	node.Usage = &models.Usage{}
+	if err := m.DB.UpdateNode(node); err != nil {
+		return err
 	}
 
-	ts, err := m.DB.FindByState(models.Initializing, models.Running, models.Paused)
+	cursor, err := m.DB.FindByState(models.Initializing, models.Running, models.Paused)
 	if err != nil {
-		return fmt.Errorf("unable to get tasks from node %s: %w", n.Host, err)
+		return err
 	}
-	for _, t := range ts {
-		if t.RemoteHost != n.Host {
+	defer func() {
+		if err := cursor.Close(nil); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	var task models.Task
+	for cursor.Next(nil) {
+		if err := cursor.Decode(&task); err != nil {
+			log.WithField("error", err).Error("Unable to decode BSON.")
 			continue
 		}
 
-		go func() {
-			if err := m.Runner.Cancel(t); err != nil {
-				log.Println(err)
-			}
-		}()
+		if task.RemoteHost != node.Host {
+			continue
+		}
+
+		if err := RemoteCancel(&task, node); err != nil {
+			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost, "error": err}).Error("Unable to remotely cancel task.")
+		}
 	}
-
-	log.Println(n)
-
 	return nil
 }
 
 // GetAllNodes returns all computing node (deactivated included).
 func (m *Master) GetAllNodes() ([]*models.Node, error) {
-	ns, err := m.DB.All()
+	ns, err := m.DB.AllNodes()
 	if err != nil {
 		return nil, fmt.Errorf("unable to get all nodes: %w", err)
 	}
 	return ns, nil
 }
 
-// Request selects a node that have enough computing resource to execute task.
+// RequestNode selects a node that have enough computing resource to execute task.
 // If there is no active node it returns NoActiveNodes error.
 // If there is some active node but none of them is able to process then it returns NoEnoughResources error.
 // Once found a node it will update in database.
-func (m *Master) Request(resources *models.Resources) (*models.Node, error) {
-	// Get active computing nodes.
+func (m *Master) RequestNode(resources *models.Resources) (*models.Node, error) {
+	// GetTask active computing nodes.
 	nodes, err := m.DB.GetActiveNodes()
 	if err != nil {
-		return nil, fmt.Errorf("unable to get active nodes: %w", err)
+		return nil, err
 	}
 	if len(nodes) == 0 {
 		return nil, NoActiveNodes{errors.New("no active node")}
 	}
 
-	// Update workload of active nodes.
+	// UpdateTask workload of active nodes.
 	if err := m.UpdateNodesWorkload(nodes); err != nil {
 		return nil, fmt.Errorf("unable to update node workload: %w", err)
 	}
 
-	// Get best node for the requested computing resources.
+	// GetTask best node for the requested computing resources.
 	// The selected node should have enough CPU and Memory available.
 	// The node with most free resources available is selected.
 	var bestNode *models.Node
@@ -123,8 +118,8 @@ func (m *Master) Request(resources *models.Resources) (*models.Node, error) {
 	for _, n := range nodes {
 		// Calculate how many resources the given node will have if selected for processing this models.
 		// If one of these values is less than zero the node is skipped.
-		cpu := n.Info.CPUCores - n.Usage.CPUCores - resources.CPUCores
-		memory := n.Info.RAMGb - n.Usage.RAMGb - resources.RAMGb
+		cpu := n.CPUCores - n.Usage.CPUCores - resources.CPUCores
+		memory := n.RAMGb - n.Usage.RAMGb - resources.RAMGb
 		if cpu < 0 || memory < 0 {
 			continue
 		}
@@ -148,18 +143,30 @@ func (m *Master) Request(resources *models.Resources) (*models.Node, error) {
 // UpdateNodesWorkload gets active tasks (Initializing or Running) and update node usage.
 func (m *Master) UpdateNodesWorkload(nodes []*models.Node) error {
 	usage := make(map[string]*models.Usage)
-	ts, err := m.DB.FindByState(models.Initializing, models.Running)
+	cursor, err := m.DB.FindByState(models.Initializing, models.Running)
 	if err != nil {
-		return fmt.Errorf("getting initializing/running tasks: %w", err)
+		return err
 	}
-	for _, t := range ts {
-		_, ok := usage[t.RemoteHost]
-		if !ok {
-			usage[t.RemoteHost] = &models.Usage{}
+	defer func() {
+		if err := cursor.Close(nil); err != nil {
+			log.Fatal(err)
 		}
-		usage[t.RemoteHost].Tasks++
-		usage[t.RemoteHost].CPUCores += t.Resources.CPUCores
-		usage[t.RemoteHost].RAMGb += t.Resources.RAMGb
+	}()
+
+	var task models.Task
+	for cursor.Next(nil) {
+		if err := cursor.Decode(&task); err != nil {
+			log.WithField("error", err).Error("Unable to decode BSON.")
+			continue
+		}
+
+		_, ok := usage[task.RemoteHost]
+		if !ok {
+			usage[task.RemoteHost] = &models.Usage{}
+		}
+		usage[task.RemoteHost].Tasks++
+		usage[task.RemoteHost].CPUCores += task.Resources.CPUCores
+		usage[task.RemoteHost].RAMGb += task.Resources.RAMGb
 	}
 
 	for _, n := range nodes {

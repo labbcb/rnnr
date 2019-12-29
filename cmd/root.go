@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 	"github.com/mitchellh/go-homedir"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"log"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -30,13 +30,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default $HOME/.rnnr.yaml)")
 	rootCmd.PersistentFlags().String("host", "http://localhost:8080", "RNNR server URL")
-	viper.BindPFlag("host", rootCmd.PersistentFlags().Lookup("host"))
-
-	rootCmd.PersistentFlags().String("database", "mongodb://localhost:27017", "URL to Mongo database")
-	viper.BindPFlag("database", rootCmd.PersistentFlags().Lookup("database"))
-
-	rootCmd.PersistentFlags().String("address", ":8080", "Address to bind server")
-	viper.BindPFlag("address", rootCmd.PersistentFlags().Lookup("address"))
+	fatalOnErr(viper.BindPFlag("host", rootCmd.PersistentFlags().Lookup("host")))
 }
 
 // initConfig reads in config file and ENV variables if set.

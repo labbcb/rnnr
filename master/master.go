@@ -1,32 +1,37 @@
 package master
 
 import (
-	"errors"
 	"fmt"
-	"github.com/labbcb/rnnr/client"
+	"github.com/gorilla/mux"
 	"github.com/labbcb/rnnr/db"
 	"github.com/labbcb/rnnr/models"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"time"
-
-	"github.com/labbcb/rnnr/server"
 )
 
 // Master is a master instance.
 type Master struct {
-	*server.Server
+	Router      *mux.Router
+	DB          *db.DB
+	ServiceInfo *models.ServiceInfo
 }
 
 // New creates a server and initializes TES API and Node management endpoints.
 // database is URI to MongoDB (without database name, which is 'rnnr-master')
 func New(database string) (*Master, error) {
-	connection, err := db.Connect(database, "rnnr-master")
+	connection, err := db.Connect(database, "rnnr")
 	if err != nil {
 		return nil, fmt.Errorf("connecting to MongoDB: %w", err)
 	}
 
 	master := &Master{
-		Server: server.New(connection, &Remote{}),
+		Router: mux.NewRouter(),
+		DB:     connection,
+		ServiceInfo: &models.ServiceInfo{
+			Name:    "rnnr",
+			Doc:     "Distributed Task Executor for Genomics Research. GA4GH TES API implementation.",
+			Storage: []string{"NFS"},
+		},
 	}
 	master.register()
 	go master.StartMonitor(5 * time.Second)
@@ -36,15 +41,15 @@ func New(database string) (*Master, error) {
 func (m *Master) StartMonitor(sleepTime time.Duration) {
 	for {
 		if err := m.InitializeTasks(); err != nil {
-			log.Println(err)
+			log.Error(err)
 		}
 
 		if err := m.RunTasks(); err != nil {
-			log.Println(err)
+			log.Error(err)
 		}
 
 		if err := m.CheckTasks(); err != nil {
-			log.Println(err)
+			log.Error(err)
 		}
 
 		time.Sleep(sleepTime)
@@ -55,25 +60,62 @@ func (m *Master) StartMonitor(sleepTime time.Duration) {
 // If node has free computing resources enough function will assign the node to this task and
 // the task state will be set as initializing.
 func (m *Master) InitializeTasks() error {
-	queuedTasks, err := m.DB.FindByState(models.Queued)
+	cursor, err := m.DB.FindByState(models.Queued)
 	if err != nil {
-		log.Println("could not get queued tasks:", err)
+		return err
 	}
-	for _, t := range queuedTasks {
-		n, err := m.Request(t.Resources)
+	defer func() {
+		if err := cursor.Close(nil); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	var task models.Task
+	for cursor.Next(nil) {
+		if err := cursor.Decode(&task); err != nil {
+			log.WithField("error", err).Error("Unable to decode BSON.")
+			continue
+		}
+
+		node, err := m.RequestNode(task.Resources)
 		switch err.(type) {
 		case nil:
-			t.RemoteHost = n.Host
-			t.State = models.Initializing
-			if err := m.DB.Update(t); err != nil {
-				log.Println("unable to update models:", err)
+			task.RemoteHost = node.Host
+			task.State = models.Initializing
+			if err := m.DB.UpdateTask(&task); err != nil {
+				log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "error": err}).Error("Unable to update task.")
+				continue
 			}
-			log.Println(t)
+			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost}).Info("Task initialized.")
 		case NoActiveNodes:
 		case NoEnoughResources:
 		default:
-			return fmt.Errorf("could not request resources for models %s: %w", t.ID, err)
+			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "error": err}).Error("Unable to request node.")
 		}
+	}
+
+	return nil
+}
+
+func (m *Master) RunTasks() error {
+	cursor, err := m.DB.FindByState(models.Initializing)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := cursor.Close(nil); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	var task models.Task
+	for cursor.Next(nil) {
+		if err := cursor.Decode(&task); err != nil {
+			log.WithField("error", err).Error("Unable to decode BSON.")
+			continue
+		}
+
+		m.RunTask(&task)
 	}
 
 	return nil
@@ -82,89 +124,111 @@ func (m *Master) InitializeTasks() error {
 // RunTask will check computing node and delegate task execution to the node.
 // If node is not active or not responding them the task will be put as queued.
 // Node will be disabled if not responding.
-func (m *Master) RunTask(t *models.Task) {
-	n, err := m.DB.GetByHost(t.RemoteHost)
+func (m *Master) RunTask(task *models.Task) {
+	node, err := m.DB.GetNode(task.RemoteHost)
 	if err != nil {
-		log.Println("unable to get node by host:", err)
+		log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost}).Error("Unable to get node.")
+		m.enqueueTask(task)
 		return
 	}
-	// Check has been disabled between task initialization and execution.
-	if n.Active {
-		if err := m.Runner.Run(t); err != nil {
-			// If there are some network error then disable node.
-			if _, ok := errors.Unwrap(err).(*client.NetworkError); ok {
-				if err := m.Deactivate(n.ID); err != nil {
-					log.Println(err)
-				}
+
+	if !node.Active {
+		m.enqueueTask(task)
+		return
+	}
+
+	if err := RemoteRun(task, node); err != nil {
+		if !node.Active {
+			if err := m.DisableNode(node.Host); err != nil {
+				log.WithFields(log.Fields{"host": node.Host, "error": err}).Error("Unable to disable node.")
 			}
-			log.Println(err)
+			log.WithFields(log.Fields{"host": node.Host, "error": err}).Warn("Unreachable node. Disabled.")
+			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost}).Warn("Putting the task back in the queue.")
+		} else {
+			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost, "state": task.State, "error": err}).Error("Unable to run task.")
 		}
-	} else {
-		t.State = models.Queued
-		t.RemoteHost = ""
-	}
-	// Update task state
-	if err := m.DB.Update(t); err != nil {
-		log.Println("unable to update models:", err)
-	}
-	log.Println(t)
-}
-
-// RunTasks will iterate over initializing tasks and starting them concurrently.
-func (m *Master) RunTasks() error {
-	initializingTasks, err := m.DB.FindByState(models.Initializing)
-	if err != nil {
-		return fmt.Errorf("could not get initializing tasks: %w", err)
+		if err := m.DB.UpdateTask(task); err != nil {
+			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "error": err}).Error("Unable to update task.")
+		}
+		return
 	}
 
-	for _, t := range initializingTasks {
-		go m.RunTask(t)
+	if err := m.DB.UpdateTask(task); err != nil {
+		log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "error": err}).Error("Unable to update task.")
 	}
 
-	return nil
+	log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost}).Info("Running task.")
 }
 
 // CheckTasks will iterate over running tasks checking if they have been completed well or not.
 // It runs concurrently.
 func (m *Master) CheckTasks() error {
-	runningTasks, err := m.DB.FindByState(models.Running)
+	cursor, err := m.DB.FindByState(models.Running)
 	if err != nil {
-		return fmt.Errorf("getting running tasks: %w", err)
+		return err
 	}
+	defer func() {
+		if err := cursor.Close(nil); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
-	for _, t := range runningTasks {
-		go m.CheckTask(t)
+	var task models.Task
+	for cursor.Next(nil) {
+		if err := cursor.Decode(&task); err != nil {
+			log.WithField("error", err).Error("Unable to decode BSON.")
+			continue
+		}
+
+		m.CheckTask(&task)
 	}
 
 	return nil
 }
 
 // CheckTask will check is a given tasks has been completed.
-func (m *Master) CheckTask(t *models.Task) {
-	n, err := m.DB.GetByHost(t.RemoteHost)
+func (m *Master) CheckTask(task *models.Task) {
+	node, err := m.DB.GetNode(task.RemoteHost)
 	if err != nil {
-		log.Println("unable to get node by host:", err)
+		log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost}).Error("Unable to get node.")
+		m.enqueueTask(task)
 		return
 	}
-	if !n.Active {
-		t.State = models.Queued
-		t.RemoteHost = ""
-	} else {
-		if err := m.Runner.Check(t); err != nil {
-			if _, ok := errors.Unwrap(err).(*client.NetworkError); ok {
-				if err := m.Deactivate(n.ID); err != nil {
-					log.Println(err)
-				}
+
+	if !node.Active {
+		m.enqueueTask(task)
+		return
+	}
+
+	if err := RemoteCheck(task, node); err != nil {
+		if !node.Active {
+			if err := m.DisableNode(node.Host); err != nil {
+				log.WithFields(log.Fields{"host": node.Host, "error": err}).Error("Unable to disable node.")
 			}
-			log.Println(err)
+			log.WithFields(log.Fields{"host": node.Host, "error": err}).Warn("Unreachable node. Disabled.")
+			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost}).Warn("Putting the task back in the queue.")
+		} else {
+			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost, "state": task.State, "error": err}).Error("Unable to check task.")
 		}
+		if err := m.DB.UpdateTask(task); err != nil {
+			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "error": err}).Error("Unable to update task.")
+		}
+		return
 	}
 
-	if t.State != models.Running {
-		log.Println(t)
+	if task.State != models.Running {
+		log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost, "state": task.State}).Info("Task finished.")
 	}
 
-	if err := m.DB.Update(t); err != nil {
-		log.Println("unable to update models:", err)
+	if err := m.DB.UpdateTask(task); err != nil {
+		log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "error": err}).Error("Unable to update task.")
+	}
+}
+
+func (m *Master) enqueueTask(task *models.Task) {
+	task.State = models.Queued
+	task.RemoteHost = ""
+	if err := m.DB.UpdateTask(task); err != nil {
+		log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "error": err}).Error("Unable to update task.")
 	}
 }

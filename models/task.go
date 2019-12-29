@@ -61,7 +61,7 @@ type Output struct {
 
 // Resources represents computing requirements to run task
 type Resources struct {
-	CPUCores    int      `json:"cpu_cores,omitempty"`
+	CPUCores    int32    `json:"cpu_cores,omitempty"`
 	RAMGb       float64  `json:"ram_gb,omitempty"`
 	DiskGb      float64  `json:"disk_gb,omitempty"`
 	Zones       []string `json:"zones,omitempty"`
@@ -92,7 +92,7 @@ type ExecutorLog struct {
 	EndTime   time.Time `json:"end_time"`         // Time the executor ended
 	Stdout    string    `json:"stdout,omitempty"` // Stdout content
 	Stderr    string    `json:"stderr,omitempty"` // Stderr content
-	ExitCode  int       `json:"exit_code"`        // Exit code
+	ExitCode  int32     `json:"exit_code"`        // Exit code
 }
 
 // OutputFileLog represents a log file

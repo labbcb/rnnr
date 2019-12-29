@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/labbcb/rnnr/models"
@@ -12,13 +13,16 @@ import (
 
 const contentType = "application/json"
 
-// ListTasks gets all tasks
 func ListTasks(host string) (*models.ListTasksResponse, error) {
 	resp, err := http.Get(host + "/tasks")
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, raiseHTTPError(resp)
@@ -31,13 +35,16 @@ func ListTasks(host string) (*models.ListTasksResponse, error) {
 	return &r, nil
 }
 
-// GetTask gets a task by its ID
 func GetTask(host, id string) (*models.Task, error) {
 	resp, err := http.Get(host + "/tasks/" + id)
 	if err != nil {
-		return nil, &NetworkError{err}
+		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, raiseHTTPError(resp)
@@ -50,27 +57,26 @@ func GetTask(host, id string) (*models.Task, error) {
 	return &t, nil
 }
 
-// CreateTask submits a task to be executed and return its ID
 func CreateTask(host string, t *models.Task) (string, error) {
-	// encode models to json
 	var b bytes.Buffer
 	if err := json.NewEncoder(&b).Encode(t); err != nil {
 		return "", err
 	}
 
-	// post request to TES endpoint
 	resp, err := http.Post(host+"/tasks", "application/json", &b)
 	if err != nil {
-		return "", &NetworkError{err}
+		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
-	// check status code
 	if resp.StatusCode != http.StatusCreated {
 		return "", raiseHTTPError(resp)
 	}
 
-	// decode json from response body
 	var r models.CreateTaskResponse
 	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
 		return "", err
@@ -78,13 +84,16 @@ func CreateTask(host string, t *models.Task) (string, error) {
 	return r.ID, nil
 }
 
-// CancelTask cancels a task
 func CancelTask(host, id string) error {
 	resp, err := http.Post(host+"/tasks/"+id+":cancel", "application/json", nil)
 	if err != nil {
-		return &NetworkError{err}
+		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return raiseHTTPError(resp)
@@ -93,7 +102,6 @@ func CancelTask(host, id string) error {
 	return nil
 }
 
-// EnableNode activates a computing node on master server.
 func EnableNode(host string, n *models.Node) (id string, err error) {
 	var b bytes.Buffer
 	if err := json.NewEncoder(&b).Encode(n); err != nil {
@@ -102,9 +110,13 @@ func EnableNode(host string, n *models.Node) (id string, err error) {
 
 	resp, err := http.Post(host+"/nodes", contentType, &b)
 	if err != nil {
-		return "", &NetworkError{err}
+		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusCreated {
 		return "", raiseHTTPError(resp)
@@ -115,12 +127,10 @@ func EnableNode(host string, n *models.Node) (id string, err error) {
 		return "", fmt.Errorf("decoding node id from json: %w", err)
 	}
 
-	return res["id"], nil
+	return res["host"], nil
 }
 
-// DisableNode deactivates a computing note on master server
 func DisableNode(host, id string) error {
-	// delete node by its id
 	c := http.Client{}
 	req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/nodes/%s", host, id), nil)
 	if err != nil {
@@ -128,9 +138,13 @@ func DisableNode(host, id string) error {
 	}
 	resp, err := c.Do(req)
 	if err != nil {
-		return &NetworkError{err}
+		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return raiseHTTPError(resp)
@@ -138,13 +152,16 @@ func DisableNode(host, id string) error {
 	return nil
 }
 
-// ListNodes retrieves list of registered nodes on master server
 func ListNodes(host string) ([]*models.Node, error) {
 	resp, err := http.Get(host + "/nodes")
 	if err != nil {
-		return nil, &NetworkError{err}
+		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
 	// check status code
 	if resp.StatusCode != http.StatusOK {
 		return nil, raiseHTTPError(resp)
@@ -155,25 +172,6 @@ func ListNodes(host string) ([]*models.Node, error) {
 		return nil, err
 	}
 	return ns, nil
-}
-
-// GetNodeInfo retrieves server information
-func GetNodeInfo(host string) (*models.Info, error) {
-	resp, err := http.Get(host + "/info")
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, raiseHTTPError(resp)
-	}
-
-	var i models.Info
-	if err := json.NewDecoder(resp.Body).Decode(&i); err != nil {
-		return nil, fmt.Errorf("parsing info from json: %w", err)
-	}
-	return &i, nil
 }
 
 // new error with 'HTTP Status (Status Code): Body'

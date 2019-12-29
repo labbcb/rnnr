@@ -1,98 +1,193 @@
 package master
 
 import (
+	"context"
 	"fmt"
-	"time"
-
-	"github.com/labbcb/rnnr/client"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/labbcb/rnnr/models"
+	"github.com/labbcb/rnnr/pb"
+	log "github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"time"
 )
 
-// Remote executes tasks in computing nodes remotely.
-type Remote struct {
+func GetNodeResources(node *models.Node) (int32, float64, error) {
+	conn, err := grpc.Dial(node.Address(), grpc.WithInsecure())
+	if err != nil {
+		return 0, 0, err
+	}
+	defer func() {
+		if err := conn.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	info, err := pb.NewWorkerClient(conn).GetInfo(context.Background(), &empty.Empty{})
+	if err != nil {
+		return 0, 0, err
+	}
+	return info.CpuCores, info.RamGb, nil
 }
 
-// Run submits a task to a remote computing node.
-func (r *Remote) Run(t *models.Task) error {
-	id, err := client.CreateTask(t.RemoteHost, t)
+func RemoteRun(task *models.Task, node *models.Node) error {
+	conn, err := grpc.Dial(node.Address(), grpc.WithInsecure())
 	if err != nil {
-		if _, ok := err.(*client.NetworkError); ok {
-			t.State = models.Queued
-			t.RemoteHost = ""
-		} else {
-			t.State = models.ExecutorError
-			t.Logs = &models.Log{}
-			t.Logs.EndTime = time.Now()
-			t.Logs.SystemLogs = append(t.Logs.SystemLogs, err.Error())
+		return err
+	}
+	defer func() {
+		if err := conn.Close(); err != nil {
+			log.Fatal(err)
 		}
-		return fmt.Errorf("unable to run models %s at %s: %w", t.ID, t.RemoteHost, err)
+	}()
+
+	_, err = pb.NewWorkerClient(conn).RunContainer(context.Background(), asContainer(task))
+	if err != nil {
+		if status.Convert(err).Code() == codes.Internal {
+			task.State = models.SystemError
+			task.Logs = &models.Log{}
+			task.Logs.EndTime = time.Now()
+			task.Logs.SystemLogs = append(task.Logs.SystemLogs, err.Error())
+			fmt.Printf("run %v\n", err)
+		} else {
+			task.State = models.Queued
+			task.RemoteHost = ""
+			node.Active = false
+		}
+		return err
 	}
 
-	t.RemoteTaskID = id
-	t.State = models.Running
-	return nil
+	task.State = models.Running
+	task.Logs.StartTime = time.Now()
+	return err
 }
 
-// Check requests remote task and updates local task.
-func (r *Remote) Check(t *models.Task) error {
-	remoteTask, err := client.GetTask(t.RemoteHost, t.RemoteTaskID)
+func RemoteCheck(task *models.Task, node *models.Node) error {
+	conn, err := grpc.Dial(node.Address(), grpc.WithInsecure())
 	if err != nil {
-		if _, ok := err.(*client.NetworkError); ok {
-			t.State = models.Queued
-			t.RemoteHost = ""
-		} else {
-			t.State = models.ExecutorError
-			t.Logs = &models.Log{}
-			t.Logs.EndTime = time.Now()
-			t.Logs.SystemLogs = append(t.Logs.SystemLogs, err.Error())
+		return err
+	}
+	defer func() {
+		if err := conn.Close(); err != nil {
+			log.Fatal(err)
 		}
-		return fmt.Errorf("unable to check models %s: %w", t.ID, err)
+	}()
+
+	state, err := pb.NewWorkerClient(conn).CheckContainer(context.Background(), asContainer(task))
+	if err != nil {
+		if status.Convert(err).Code() == codes.Internal {
+			task.State = models.SystemError
+			task.Logs.SystemLogs = append(task.Logs.SystemLogs, err.Error())
+			return err
+		} else {
+			task.State = models.Queued
+			task.RemoteHost = ""
+			node.Active = false
+		}
+		return err
 	}
 
-	if remoteTask.Active() {
+	if !state.Exited {
 		return nil
 	}
 
-	t.State = remoteTask.State
-	t.Executors = remoteTask.Executors
-	t.Logs = remoteTask.Logs
-	t.Outputs = remoteTask.Outputs
+	if state.ExitCode == 0 {
+		task.State = models.Complete
+	} else {
+		task.State = models.ExecutorError
+	}
+	task.Logs.EndTime = time.Now()
+	task.Logs.ExecutorLogs = executorLogs(state)
+
 	return nil
 }
 
-// Cancel request task cancellation to node and keep requesting remote task until its state is changed.
-func (r *Remote) Cancel(t *models.Task) error {
-	if !t.Active() {
-		return fmt.Errorf("models %s is not active, it is %s", t.ID, t.State)
-	}
-
-	if t.State == models.Queued || t.State == models.Initializing {
-		t.State = models.Canceled
-		t.Logs = &models.Log{}
-		t.Logs.EndTime = time.Now()
+func RemoteCancel(task *models.Task, node *models.Node) error {
+	if !task.Active() {
 		return nil
 	}
 
-	if err := client.CancelTask(t.RemoteHost, t.RemoteTaskID); err != nil {
-		t.State = models.ExecutorError
-		t.Logs = &models.Log{}
-		t.Logs.EndTime = time.Now()
-		t.Logs.SystemLogs = append(t.Logs.SystemLogs, err.Error())
-		return fmt.Errorf("unable to cancel models %s at %s: %w", t.ID, t.RemoteHost, err)
+	if task.State == models.Queued || task.State == models.Initializing {
+		task.State = models.Canceled
+		task.Logs.EndTime = time.Now()
+		return nil
 	}
 
-	remoteTask, err := client.GetTask(t.RemoteHost, t.RemoteTaskID)
+	conn, err := grpc.Dial(node.Address(), grpc.WithInsecure())
 	if err != nil {
-		t.State = models.ExecutorError
-		t.Logs = &models.Log{}
-		t.Logs.EndTime = time.Now()
-		t.Logs.SystemLogs = append(t.Logs.SystemLogs, err.Error())
-		return fmt.Errorf("unable to get canceled models %s at %s: %w", t.ID, t.RemoteHost, err)
+		task.State = models.SystemError
+		task.Logs.EndTime = time.Now()
+		return err
+	}
+	defer func() {
+		if err := conn.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	_, err = pb.NewWorkerClient(conn).StopContainer(context.Background(), asContainer(task))
+	if err != nil {
+		task.State = models.SystemError
+		task.Logs.EndTime = time.Now()
+		task.Logs.SystemLogs = append(task.Logs.SystemLogs, err.Error())
+		return err
 	}
 
-	t.State = remoteTask.State
-	t.Executors = remoteTask.Executors
-	t.Logs = remoteTask.Logs
-	t.Outputs = remoteTask.Outputs
+	task.State = models.Canceled
+	task.Logs.EndTime = time.Now()
 	return nil
+}
+
+func asContainer(t *models.Task) *pb.Container {
+	return &pb.Container{
+		Id:      t.ID,
+		Image:   t.Executors[0].Image,
+		Command: t.Executors[0].Command,
+		WorkDir: t.Executors[0].WorkDir,
+		Outputs: outputs(t.Outputs),
+		Inputs:  inputs(t.Inputs),
+		Env:     t.Executors[0].Env,
+	}
+}
+
+func outputs(os []*models.Output) []*pb.Volume {
+	var vs []*pb.Volume
+	for _, o := range os {
+		vs = append(vs, &pb.Volume{
+			HostPath:      o.URL,
+			ContainerPath: o.Path,
+		})
+	}
+
+	return vs
+}
+
+func inputs(is []*models.Input) []*pb.Volume {
+	var vs []*pb.Volume
+	for _, i := range is {
+		vs = append(vs, &pb.Volume{
+			HostPath:      i.URL,
+			ContainerPath: i.Path,
+		})
+	}
+
+	return vs
+}
+
+func executorLogs(m *pb.State) []*models.ExecutorLog {
+	return []*models.ExecutorLog{{
+		StartTime: asTime(m.Start),
+		EndTime:   asTime(m.End),
+		Stdout:    m.Stdout,
+		Stderr:    m.Stderr,
+		ExitCode:  m.ExitCode,
+	}}
+}
+
+func asTime(p *timestamp.Timestamp) time.Time {
+	t, _ := ptypes.Timestamp(p)
+	return t
 }

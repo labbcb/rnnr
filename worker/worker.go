@@ -1,131 +1,80 @@
 package worker
 
 import (
-	"fmt"
-	"github.com/labbcb/rnnr/models"
-	"log"
-	"runtime"
-	"time"
-
-	"github.com/labbcb/rnnr/db"
-
+	"context"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/labbcb/rnnr/docker"
-	"github.com/labbcb/rnnr/server"
+	"github.com/labbcb/rnnr/pb"
 	"github.com/pbnjay/memory"
+	log "github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"runtime"
 )
 
-// Worker server is a standalone task executor that can be connected with a Master server.
 type Worker struct {
-	*server.Server
-	Info *models.Info
+	Info   *pb.Info
+	Docker *docker.Docker
 }
 
-// New creates a standalone worker server and initializes TES API endpoints.
-// If cpuCores of ramGb is zero then the function will guess the maximum values.
-func New(uri string, cpuCores int, ramGb float64) (*Worker, error) {
-	client, err := db.Connect(uri, "rnnr-worker")
-	if err != nil {
-		return nil, fmt.Errorf("unable to connect to MongoDB: %w", err)
-	}
-
+func New(cpuCores int32, ramGb float64) (*Worker, error) {
 	rnnr, err := docker.Connect()
 	if err != nil {
-		return nil, fmt.Errorf("unable to connect to Docker: %w", err)
+		return nil, err
 	}
 
 	if cpuCores == 0 {
-		cpuCores = runtime.NumCPU()
+		cpuCores = int32(runtime.NumCPU())
 	}
 	if ramGb == 0 {
 		ramGb = float64(memory.TotalMemory() / 1e+9)
 	}
 
 	worker := &Worker{
-		Server: server.New(client, rnnr),
-		Info: &models.Info{
-			CPUCores: cpuCores,
-			RAMGb:    ramGb,
+		Docker: rnnr,
+		Info: &pb.Info{
+			CpuCores: cpuCores,
+			RamGb:    ramGb,
 		},
 	}
 
-	worker.register()
-	go worker.StartMonitor(5 * time.Second)
 	return worker, nil
 }
 
-func (w *Worker) StartMonitor(sleepTime time.Duration) {
-	for {
-		if err := w.InitializeAndRunTasks(); err != nil {
-			log.Println(err)
-		}
-
-		if err := w.CheckTasks(); err != nil {
-			log.Println(err)
-		}
-
-		time.Sleep(sleepTime)
-	}
+func (w *Worker) GetInfo(context.Context, *empty.Empty) (*pb.Info, error) {
+	return w.Info, nil
 }
 
-// InitializeAndRunTasks will iterate over queued tasks initializing and executing them.
-func (w *Worker) InitializeAndRunTasks() error {
-	ts, err := w.DB.FindByState(models.Queued)
+func (w *Worker) RunContainer(ctx context.Context, container *pb.Container) (*empty.Empty, error) {
+	if err := w.Docker.Run(ctx, container); err != nil {
+		log.WithFields(log.Fields{"id": container.Id, "image": container.Image, "error": err}).Error("Unable to run container.")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	log.WithFields(log.Fields{"id": container.Id, "image": container.Image}).Info("Running container.")
+	return &empty.Empty{}, nil
+}
+
+func (w *Worker) CheckContainer(ctx context.Context, container *pb.Container) (*pb.State, error) {
+	state, err := w.Docker.Check(ctx, container)
 	if err != nil {
-		return fmt.Errorf("could not get queued tasks: %w", err)
+		log.WithFields(log.Fields{"id": container.Id, "error": err}).Error("Unable to check container.")
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	for _, t := range ts {
-		t.State = models.Initializing
-		if err := w.DB.Update(t); err != nil {
-			log.Printf("could not update state of task %s: %v", t.ID, err)
-		}
-
-		log.Println(t)
-		go w.RunTask(t)
+	if state.Exited {
+		log.WithFields(log.Fields{"id": container.Id, "exitCode": state.ExitCode}).Info("Container exited.")
 	}
 
-	return nil
+	return state, nil
 }
 
-func (w *Worker) CheckTasks() error {
-	runningTasks, err := w.DB.FindByState(models.Running)
-	if err != nil {
-		return fmt.Errorf("getting running tasks: %w", err)
+func (w *Worker) StopContainer(ctx context.Context, container *pb.Container) (*empty.Empty, error) {
+	if err := w.Docker.Stop(ctx, container.Id); err != nil {
+		log.WithFields(log.Fields{"id": container.Id, "error": err}).Error("Unable to stop container.")
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	for _, t := range runningTasks {
-		go w.CheckTask(t)
-	}
-
-	return nil
-}
-
-func (w *Worker) RunTask(t *models.Task) {
-	if err := w.Runner.Run(t); err != nil {
-		log.Println(err)
-		t.State = models.ExecutorError
-		t.Logs = &models.Log{}
-		t.Logs.EndTime = time.Now()
-		t.Logs.SystemLogs = append(t.Logs.SystemLogs, err.Error())
-	}
-	if err := w.DB.Update(t); err != nil {
-		log.Println("unable to update task:", err)
-	}
-	log.Println(t)
-}
-
-func (w *Worker) CheckTask(t *models.Task) {
-	if err := w.Runner.Check(t); err != nil {
-		log.Println(err)
-		t.State = models.ExecutorError
-		t.Logs = &models.Log{}
-		t.Logs.EndTime = time.Now()
-		t.Logs.SystemLogs = append(t.Logs.SystemLogs, err.Error())
-	}
-	if err := w.DB.Update(t); err != nil {
-		log.Println("unable to update task:", err)
-	}
-	if t.State != models.Running {
-		log.Println(t)
-	}
+	log.WithFields(log.Fields{"id": container.Id}).Info("Stopped container.")
+	return &empty.Empty{}, nil
 }

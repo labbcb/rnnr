@@ -9,22 +9,22 @@ import (
 
 var nodesCmd = &cobra.Command{
 	Use:   "nodes",
-	Short: "List computing nodes",
+	Short: "ListTasks computing nodes",
 	Run: func(cmd *cobra.Command, args []string) {
 		host := viper.GetString("host")
 		ns, err := client.ListNodes(host)
 		fatalOnErr(err)
 
 		var status string
-		fmt.Printf("%-36s   %-29s   %s   %-8s   %s\n", "ID", "Resources", "Tasks", "Status", "URL")
+		fmt.Printf("%-29s   %s   %-8s   %s\n", "Resources", "Tasks", "Status", "Host (port)")
 		for _, n := range ns {
 			if n.Active {
 				status = "ACTIVE"
 			} else {
 				status = "INACTIVE"
 			}
-			fmt.Printf("%-36s | CPU=%02d/%02d RAM=%06.2f/%06.2fGB | %02d    | %-8s | %s\n",
-				n.ID, n.Usage.CPUCores, n.Info.CPUCores, n.Usage.RAMGb, n.Info.RAMGb, n.Usage.Tasks, status, n.Host)
+			fmt.Printf("CPU=%02d/%02d RAM=%06.2f/%06.2fGB | %02d    | %-8s | %s (%s)\n",
+				n.Usage.CPUCores, n.CPUCores, n.Usage.RAMGb, n.RAMGb, n.Usage.Tasks, status, n.Host, n.Port)
 		}
 	},
 }
