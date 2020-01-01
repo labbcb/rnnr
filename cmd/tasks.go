@@ -25,7 +25,7 @@ var tasksCmd = &cobra.Command{
 
 		var desc string
 		for _, task := range resp.Tasks {
-			if !(all || task.State == models.Queued || task.State == models.Running) {
+			if !(all || task.Active()) {
 				continue
 			}
 			if task.RemoteHost != "" {
