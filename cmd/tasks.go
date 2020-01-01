@@ -21,7 +21,7 @@ var tasksCmd = &cobra.Command{
 		resp, err := client.ListTasks(host)
 		fatalOnErr(err)
 
-		fmt.Printf("%-36s   %-18s   %-14s   %s\n", "Task ID", "Resources", "State", "Name")
+		fmt.Printf("%-36s   %-18s   %-14s   %s\n", "Task ID", "Resources", "State", "Name at server (elapsed time)")
 
 		var desc string
 		for _, task := range resp.Tasks {
