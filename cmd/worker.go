@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/labbcb/rnnr/pb"
 	"github.com/labbcb/rnnr/worker"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"net"
@@ -15,6 +16,10 @@ var workerCmd = &cobra.Command{
 	Aliases: []string{"start"},
 	Short:   "Start RNNR worker server",
 	Run: func(cmd *cobra.Command, args []string) {
+		log.SetFormatter(&log.TextFormatter{
+			FullTimestamp: true,
+		})
+
 		w, err := worker.New(cpuCores, ramGb)
 		fatalOnErr(err)
 

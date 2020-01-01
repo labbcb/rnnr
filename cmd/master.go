@@ -14,6 +14,10 @@ var masterCmd = &cobra.Command{
 	Aliases: []string{"server"},
 	Short:   "StartMonitor RNNR master server",
 	Run: func(cmd *cobra.Command, args []string) {
+		log.SetFormatter(&log.TextFormatter{
+			FullTimestamp: true,
+		})
+
 		m, err := master.New(database)
 		fatalOnErr(err)
 
