@@ -27,7 +27,7 @@ func (m *Master) EnableNode(node *models.Node) error {
 		node.CPUCores = maxCpu
 	}
 
-	if node.RAMGb != 0 || node.RAMGb > maxRamGb {
+	if node.RAMGb == 0 || node.RAMGb > maxRamGb {
 		node.RAMGb = maxRamGb
 	}
 
