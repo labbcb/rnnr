@@ -104,16 +104,6 @@ func RemoteCheck(task *models.Task, node *models.Node) error {
 }
 
 func RemoteCancel(task *models.Task, node *models.Node) error {
-	if !task.Active() {
-		return nil
-	}
-
-	if task.State == models.Queued || task.State == models.Initializing {
-		task.State = models.Canceled
-		task.Logs.EndTime = time.Now()
-		return nil
-	}
-
 	conn, err := grpc.Dial(node.Address(), grpc.WithInsecure())
 	if err != nil {
 		task.State = models.SystemError

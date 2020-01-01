@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/labbcb/rnnr/models"
+	log "github.com/sirupsen/logrus"
 	"time"
 )
 
@@ -34,31 +35,36 @@ func (m *Master) CreateTask(t *models.Task) error {
 func (m *Master) GetTask(id string) (*models.Task, error) {
 	t, err := m.DB.GetTask(id)
 	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve models %m: %w", id, err)
+		return nil, err
 	}
 	return t, nil
 }
 
 func (m *Master) CancelTask(id string) error {
-	t, err := m.GetTask(id)
+	task, err := m.GetTask(id)
 	if err != nil {
 		return err
 	}
-	if !t.Active() {
+
+	if !task.Active() {
 		return nil
 	}
 
-	node, err := m.DB.GetNode(id)
+	if task.State == models.Queued || task.State == models.Initializing {
+		task.State = models.Canceled
+		task.Logs.EndTime = time.Now()
+		return m.DB.UpdateTask(task)
+	}
+
+	node, err := m.DB.GetNode(task.RemoteHost)
 	if err != nil {
 		return err
 	}
-	if err := RemoteCancel(t, node); err != nil {
-		return fmt.Errorf("unable to cancel models %m: %w", id, err)
+	if err := RemoteCancel(task, node); err != nil {
+		log.WithField("error", err).Error("Unable to cancel task remotely.")
 	}
-	if err := m.DB.UpdateTask(t); err != nil {
-		return fmt.Errorf("unable to save canceled models %m: %w", id, err)
-	}
-	return nil
+
+	return m.DB.UpdateTask(task)
 }
 
 func (m *Master) ListTasks(namePrefix string, pageSize int, pageToken string, view models.View) (*models.ListTasksResponse, error) {
