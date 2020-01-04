@@ -54,7 +54,7 @@ func (d *Docker) Stop(ctx context.Context, id string) error {
 	if err := d.client.ContainerStop(ctx, id, nil); err != nil {
 		return err
 	}
-	return d.client.ContainerRemove(ctx, id, types.ContainerRemoveOptions{})
+	return d.client.ContainerRemove(ctx, id, types.ContainerRemoveOptions{Force: true})
 }
 
 func (d *Docker) Check(ctx context.Context, container *pb.Container) (*pb.State, error) {
