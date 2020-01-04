@@ -63,7 +63,7 @@ func (m *Master) RunTasks() error {
 		}
 	}()
 
-	var task models.Task
+	var task *models.Task
 	for cursor.Next(nil) {
 		if err := cursor.Decode(&task); err != nil {
 			log.WithField("error", err).Error("Unable to decode BSON.")
@@ -75,13 +75,13 @@ func (m *Master) RunTasks() error {
 		case nil:
 			task.RemoteHost = node.Host
 			task.State = models.Initializing
-			if err := m.DB.UpdateTask(&task); err != nil {
+			if err := m.DB.UpdateTask(task); err != nil {
 				log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "error": err}).Error("Unable to update task.")
 				continue
 			}
 			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost}).Info("Task initialized.")
 
-			go m.RunTask(&task)
+			go m.RunTask(task, node)
 		case NoActiveNodes:
 		case NoEnoughResources:
 		default:
@@ -95,19 +95,7 @@ func (m *Master) RunTasks() error {
 // RunTask will check computing node and delegate task execution to the node.
 // If node is not active or not responding them the task will be put as queued.
 // Node will be disabled if not responding.
-func (m *Master) RunTask(task *models.Task) {
-	node, err := m.DB.GetNode(task.RemoteHost)
-	if err != nil {
-		log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost}).Error("Unable to get node.")
-		m.enqueueTask(task)
-		return
-	}
-
-	if !node.Active {
-		m.enqueueTask(task)
-		return
-	}
-
+func (m *Master) RunTask(task *models.Task, node *models.Node) {
 	if err := RemoteRun(task, node); err != nil {
 		if !node.Active {
 			if err := m.DisableNode(node.Host); err != nil {
