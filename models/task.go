@@ -134,8 +134,7 @@ type Task struct {
 	CreationTime time.Time         `json:"creation_time"`
 
 	// These fields extend TES API allowing client to know which node is processing the task.
-	RemoteHost   string `json:"remote_host"`
-	RemoteTaskID string `json:"remote_task_id"`
+	RemoteHost string `json:"remote_host"`
 }
 
 // ListTasksResponse represents a list of tasks previous submitted to system

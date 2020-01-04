@@ -57,33 +57,6 @@ func GetTask(host, id string) (*models.Task, error) {
 	return &t, nil
 }
 
-func CreateTask(host string, t *models.Task) (string, error) {
-	var b bytes.Buffer
-	if err := json.NewEncoder(&b).Encode(t); err != nil {
-		return "", err
-	}
-
-	resp, err := http.Post(host+"/tasks", "application/json", &b)
-	if err != nil {
-		return "", err
-	}
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			log.Fatal(err)
-		}
-	}()
-
-	if resp.StatusCode != http.StatusCreated {
-		return "", raiseHTTPError(resp)
-	}
-
-	var r models.CreateTaskResponse
-	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
-		return "", err
-	}
-	return r.ID, nil
-}
-
 func CancelTask(host, id string) error {
 	resp, err := http.Post(host+"/tasks/"+id+":cancel", "application/json", nil)
 	if err != nil {

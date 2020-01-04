@@ -53,23 +53,12 @@ func (m *Master) StartMonitor(sleepTime time.Duration) {
 }
 
 func (m *Master) RunTasks() error {
-	cursor, err := m.DB.FindByState(models.Queued)
+	tasks, err := m.DB.FindByState(models.Queued)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := cursor.Close(nil); err != nil {
-			log.Fatal(err)
-		}
-	}()
 
-	var task *models.Task
-	for cursor.Next(nil) {
-		if err := cursor.Decode(&task); err != nil {
-			log.WithField("error", err).Error("Unable to decode BSON.")
-			continue
-		}
-
+	for _, task := range tasks {
 		node, err := m.RequestNode(task.Resources)
 		switch err.(type) {
 		case nil:
@@ -122,24 +111,13 @@ func (m *Master) RunTask(task *models.Task, node *models.Node) {
 // CheckTasks will iterate over running tasks checking if they have been completed well or not.
 // It runs concurrently.
 func (m *Master) CheckTasks() error {
-	cursor, err := m.DB.FindByState(models.Running)
+	tasks, err := m.DB.FindByState(models.Running)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := cursor.Close(nil); err != nil {
-			log.Fatal(err)
-		}
-	}()
 
-	var task models.Task
-	for cursor.Next(nil) {
-		if err := cursor.Decode(&task); err != nil {
-			log.WithField("error", err).Error("Unable to decode BSON.")
-			continue
-		}
-
-		m.CheckTask(&task)
+	for _, task := range tasks {
+		m.CheckTask(task)
 	}
 
 	return nil

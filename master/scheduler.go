@@ -54,29 +54,18 @@ func (m *Master) DisableNode(host string) error {
 		return err
 	}
 
-	cursor, err := m.DB.FindByState(models.Initializing, models.Running, models.Paused)
+	tasks, err := m.DB.FindByState(models.Initializing, models.Running, models.Paused)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := cursor.Close(nil); err != nil {
-			log.Fatal(err)
-		}
-	}()
 
-	var task models.Task
-	for cursor.Next(nil) {
-		if err := cursor.Decode(&task); err != nil {
-			log.WithField("error", err).Error("Unable to decode BSON.")
-			continue
-		}
-
+	for _, task := range tasks {
 		if task.RemoteHost != node.Host {
 			continue
 		}
 
 		go func() {
-			if err := RemoteCancel(&task, node); err != nil {
+			if err := RemoteCancel(task, node); err != nil {
 				log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost, "error": err}).Error("Unable to remotely cancel task.")
 			}
 		}()
@@ -145,23 +134,12 @@ func (m *Master) RequestNode(resources *models.Resources) (*models.Node, error) 
 // UpdateNodesWorkload gets active tasks (Initializing or Running) and update node usage.
 func (m *Master) UpdateNodesWorkload(nodes []*models.Node) error {
 	usage := make(map[string]*models.Usage)
-	cursor, err := m.DB.FindByState(models.Initializing, models.Running)
+	tasks, err := m.DB.FindByState(models.Initializing, models.Running)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := cursor.Close(nil); err != nil {
-			log.Fatal(err)
-		}
-	}()
 
-	var task models.Task
-	for cursor.Next(nil) {
-		if err := cursor.Decode(&task); err != nil {
-			log.WithField("error", err).Error("Unable to decode BSON.")
-			continue
-		}
-
+	for _, task := range tasks {
 		_, ok := usage[task.RemoteHost]
 		if !ok {
 			usage[task.RemoteHost] = &models.Usage{}

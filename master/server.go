@@ -25,11 +25,7 @@ func (m *Master) CreateTask(t *models.Task) error {
 	if t.Resources.CPUCores == 0 {
 		t.Resources.CPUCores = 1
 	}
-	if err := m.DB.SaveTask(t); err != nil {
-		return fmt.Errorf("unable to save models %m: %w", t.ID, err)
-	}
-
-	return nil
+	return m.DB.SaveTask(t)
 }
 
 func (m *Master) GetTask(id string) (*models.Task, error) {

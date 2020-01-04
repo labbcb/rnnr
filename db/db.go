@@ -51,9 +51,23 @@ func (d *DB) UpdateTask(t *models.Task) error {
 		FindOneAndReplace(nil, bson.M{"_id": t.ID}, &t, options.FindOneAndReplace()).Err()
 }
 
-func (d *DB) FindByState(states ...models.State) (*mongo.Cursor, error) {
+func (d *DB) FindByState(states ...models.State) ([]*models.Task, error) {
 	filter := bson.M{"state": bson.M{"$in": states}}
-	return d.client.Database(d.database).Collection(TaskCollection).Find(nil, filter, options.Find())
+	cursor, err := d.client.Database(d.database).Collection(TaskCollection).Find(nil, filter, options.Find())
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := cursor.Close(nil); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	var tasks []*models.Task
+	if err := cursor.All(nil, &tasks); err != nil {
+		return nil, err
+	}
+	return tasks, nil
 }
 
 // AllTasks returns all tasks stored in database
