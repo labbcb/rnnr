@@ -40,10 +40,6 @@ func New(database string) (*Master, error) {
 
 func (m *Master) StartMonitor(sleepTime time.Duration) {
 	for {
-		if err := m.InitializeTasks(); err != nil {
-			log.Error(err)
-		}
-
 		if err := m.RunTasks(); err != nil {
 			log.Error(err)
 		}
@@ -56,10 +52,7 @@ func (m *Master) StartMonitor(sleepTime time.Duration) {
 	}
 }
 
-// InitializeTasks will iterate over queued tasks requesting a compute node to execute them.
-// If node has free computing resources enough function will assign the node to this task and
-// the task state will be set as initializing.
-func (m *Master) InitializeTasks() error {
+func (m *Master) RunTasks() error {
 	cursor, err := m.DB.FindByState(models.Queued)
 	if err != nil {
 		return err
@@ -87,35 +80,13 @@ func (m *Master) InitializeTasks() error {
 				continue
 			}
 			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost}).Info("Task initialized.")
+
+			go m.RunTask(&task)
 		case NoActiveNodes:
 		case NoEnoughResources:
 		default:
 			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "error": err}).Error("Unable to request node.")
 		}
-	}
-
-	return nil
-}
-
-func (m *Master) RunTasks() error {
-	cursor, err := m.DB.FindByState(models.Initializing)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := cursor.Close(nil); err != nil {
-			log.Fatal(err)
-		}
-	}()
-
-	var task models.Task
-	for cursor.Next(nil) {
-		if err := cursor.Decode(&task); err != nil {
-			log.WithField("error", err).Error("Unable to decode BSON.")
-			continue
-		}
-
-		m.RunTask(&task)
 	}
 
 	return nil
