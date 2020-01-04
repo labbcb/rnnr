@@ -115,7 +115,7 @@ func (m *Master) RunTasks() error {
 			continue
 		}
 
-		m.RunTask(&task)
+		go m.RunTask(&task)
 	}
 
 	return nil
