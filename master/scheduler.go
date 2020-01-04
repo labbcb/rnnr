@@ -75,9 +75,11 @@ func (m *Master) DisableNode(host string) error {
 			continue
 		}
 
-		if err := RemoteCancel(&task, node); err != nil {
-			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost, "error": err}).Error("Unable to remotely cancel task.")
-		}
+		go func() {
+			if err := RemoteCancel(&task, node); err != nil {
+				log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost, "error": err}).Error("Unable to remotely cancel task.")
+			}
+		}()
 	}
 	return nil
 }
