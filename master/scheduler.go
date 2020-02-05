@@ -19,17 +19,17 @@ type NoEnoughResources struct {
 }
 
 func (m *Master) EnableNode(node *models.Node) error {
-	maxCpu, maxRamGb, err := GetNodeResources(node)
+	maxCPU, maxRAMGb, err := GetNodeResources(node)
 	if err != nil {
 		return err
 	}
 
-	if node.CPUCores == 0 || node.CPUCores > maxCpu {
-		node.CPUCores = maxCpu
+	if node.CPUCores == 0 || node.CPUCores > maxCPU {
+		node.CPUCores = maxCPU
 	}
 
-	if node.RAMGb == 0 || node.RAMGb > maxRamGb {
-		node.RAMGb = maxRamGb
+	if node.RAMGb == 0 || node.RAMGb > maxRAMGb {
+		node.RAMGb = maxRAMGb
 	}
 
 	node.Active = true
@@ -96,31 +96,26 @@ func (m *Master) RequestNode(resources *models.Resources) (*models.Node, error) 
 		return nil, NoActiveNodes{errors.New("no active node")}
 	}
 
-	// UpdateTask workload of active nodes.
+	// Update workload of active nodes.
 	if err := m.UpdateNodesWorkload(nodes); err != nil {
 		return nil, fmt.Errorf("unable to update node workload: %w", err)
 	}
 
-	// GetTask best node for the requested computing resources.
+	// Get the best node for the requested computing resources.
 	// The selected node should have enough CPU and Memory available.
-	// The node with most free resources available is selected.
+	// Calculate how much free resources nodes would have if task is assigned.
+	// The node with least free resources available is selected.
 	var bestNode *models.Node
-	var bestNodeScore float64
-	for _, n := range nodes {
-		// Calculate how many resources the given node will have if selected for processing this models.
-		// If one of these values is less than zero the node is skipped.
-		cpu := n.CPUCores - n.Usage.CPUCores - resources.CPUCores
-		memory := n.RAMGb - n.Usage.RAMGb - resources.RAMGb
-		if cpu < 0 || memory < 0 {
+	for _, node := range nodes {
+		freeCPU := node.CPUCores - node.Usage.CPUCores - resources.CPUCores
+		freeRAMGb := node.RAMGb - node.Usage.RAMGb - resources.RAMGb
+
+		if freeCPU < 0 || freeRAMGb < 0 {
 			continue
 		}
 
-		// Calculate score of a given node.
-		// Higher the value more free resource the node has.
-		score := float64(cpu)*1.5 + memory
-		if score >= bestNodeScore {
-			bestNode = n
-			bestNodeScore = score
+		if bestNode == nil || freeCPU <= bestNode.CPUCores && freeRAMGb <= bestNode.RAMGb {
+			bestNode = node
 		}
 	}
 
