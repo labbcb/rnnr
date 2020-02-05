@@ -3,6 +3,7 @@ package master
 import (
 	"errors"
 	"fmt"
+
 	"github.com/labbcb/rnnr/models"
 	log "github.com/sirupsen/logrus"
 )
@@ -64,11 +65,10 @@ func (m *Master) DisableNode(host string) error {
 			continue
 		}
 
-		go func() {
-			if err := RemoteCancel(task, node); err != nil {
-				log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost, "error": err}).Error("Unable to remotely cancel task.")
-			}
-		}()
+		if err := RemoteCancel(task, node); err != nil {
+			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost, "error": err}).Error("Unable to remotely cancel task.")
+		}
+		log.WithField("id", task.ID).Info("Task canceled.")
 	}
 	return nil
 }
