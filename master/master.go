@@ -2,11 +2,12 @@ package master
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/gorilla/mux"
 	"github.com/labbcb/rnnr/db"
 	"github.com/labbcb/rnnr/models"
 	log "github.com/sirupsen/logrus"
-	"time"
 )
 
 // Master is a master instance.
@@ -154,7 +155,7 @@ func (m *Master) CheckTask(task *models.Task) {
 	}
 
 	if task.State != models.Running {
-		elapsed := task.Logs.EndTime.Sub(task.Logs.StartTime)
+		elapsed := int(task.Logs.EndTime.Sub(task.Logs.StartTime).Seconds())
 		log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost, "state": task.State, "elapsed": elapsed}).Info("Task finished.")
 	}
 

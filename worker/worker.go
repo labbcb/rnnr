@@ -2,6 +2,9 @@ package worker
 
 import (
 	"context"
+	"runtime"
+	"time"
+
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -11,8 +14,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"runtime"
-	"time"
 )
 
 type Worker struct {
@@ -66,7 +67,7 @@ func (w *Worker) CheckContainer(ctx context.Context, container *pb.Container) (*
 	}
 
 	if state.Exited {
-		elapsed := asTime(state.End).Sub(asTime(state.Start))
+		elapsed := int(asTime(state.End).Sub(asTime(state.Start)).Seconds())
 		log.WithFields(log.Fields{"id": container.Id, "exitCode": state.ExitCode, "elapsed": elapsed}).Info("Container exited.")
 	}
 
