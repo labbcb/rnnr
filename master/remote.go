@@ -84,11 +84,11 @@ func RemoteCheck(task *models.Task, node *models.Node) error {
 			task.State = models.SystemError
 			task.Logs.SystemLogs = append(task.Logs.SystemLogs, err.Error())
 			return err
-		} else {
-			task.State = models.Queued
-			task.RemoteHost = ""
-			node.Active = false
 		}
+
+		task.State = models.Queued
+		task.RemoteHost = ""
+		node.Active = false
 		return err
 	}
 

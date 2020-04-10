@@ -18,6 +18,7 @@ type NoEnoughResources struct {
 	error
 }
 
+// EnableNode inserts or enables a worker node.
 func (m *Master) EnableNode(node *models.Node) error {
 	maxCPU, maxRAMGb, err := GetNodeResources(node)
 	if err != nil {
