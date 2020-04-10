@@ -168,7 +168,7 @@ const (
 	Full View = "FULL"
 )
 
-// GetActiveNodes returns true if task state is
+// Active returns true if task state is
 // - Queued
 // - Initializing
 // - Running

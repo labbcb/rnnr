@@ -39,6 +39,7 @@ func New(database string) (*Master, error) {
 	return master, nil
 }
 
+// StartMonitor starts background tasks in loop.
 func (m *Master) StartMonitor(sleepTime time.Duration) {
 	for {
 		if err := m.RunTasks(); err != nil {
@@ -53,6 +54,7 @@ func (m *Master) StartMonitor(sleepTime time.Duration) {
 	}
 }
 
+// RunTasks tries to start queued tasks.
 func (m *Master) RunTasks() error {
 	tasks, err := m.DB.FindByState(models.Queued)
 	if err != nil {

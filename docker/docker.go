@@ -20,10 +20,12 @@ import (
 	"github.com/docker/docker/client"
 )
 
+// Docker struct wraps Docker client
 type Docker struct {
 	client *client.Client
 }
 
+// Connect creates a Docker client using environment variables
 func Connect() (*Docker, error) {
 	c, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -32,6 +34,7 @@ func Connect() (*Docker, error) {
 	return &Docker{c}, nil
 }
 
+// Run runs a container
 func (d *Docker) Run(ctx context.Context, container *pb.Container) error {
 	if err := d.pullImage(container.Image, ioutil.Discard); err != nil {
 		return err
@@ -51,6 +54,7 @@ func (d *Docker) Run(ctx context.Context, container *pb.Container) error {
 		env, mounts(container))
 }
 
+// Stop stops and removes a container
 func (d *Docker) Stop(ctx context.Context, id string) error {
 	if err := d.client.ContainerStop(ctx, id, nil); err != nil {
 		return err
@@ -58,6 +62,7 @@ func (d *Docker) Stop(ctx context.Context, id string) error {
 	return d.client.ContainerRemove(ctx, id, types.ContainerRemoveOptions{Force: true})
 }
 
+// Check verifies if container is still running.
 func (d *Docker) Check(ctx context.Context, container *pb.Container) (*pb.State, error) {
 	resp, err := d.client.ContainerInspect(ctx, container.Id)
 	if err != nil {

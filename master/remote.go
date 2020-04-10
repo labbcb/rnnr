@@ -2,6 +2,8 @@ package master
 
 import (
 	"context"
+	"time"
+
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -11,9 +13,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"time"
 )
 
+// GetNodeResources gets node resource information.
 func GetNodeResources(node *models.Node) (int32, float64, error) {
 	conn, err := grpc.Dial(node.Address(), grpc.WithInsecure())
 	if err != nil {
@@ -32,6 +34,7 @@ func GetNodeResources(node *models.Node) (int32, float64, error) {
 	return info.CpuCores, info.RamGb, nil
 }
 
+// RemoteRun runs remotely a task.
 func RemoteRun(task *models.Task, node *models.Node) error {
 	conn, err := grpc.Dial(node.Address(), grpc.WithInsecure())
 	if err != nil {
@@ -63,6 +66,7 @@ func RemoteRun(task *models.Task, node *models.Node) error {
 	return err
 }
 
+// RemoteCheck checks remotely a task.
 func RemoteCheck(task *models.Task, node *models.Node) error {
 	conn, err := grpc.Dial(node.Address(), grpc.WithInsecure())
 	if err != nil {
@@ -103,6 +107,7 @@ func RemoteCheck(task *models.Task, node *models.Node) error {
 	return nil
 }
 
+// RemoteCancel cancels remotely a task.
 func RemoteCancel(task *models.Task, node *models.Node) error {
 	conn, err := grpc.Dial(node.Address(), grpc.WithInsecure())
 	if err != nil {

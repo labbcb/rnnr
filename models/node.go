@@ -15,6 +15,7 @@ type Node struct {
 	Usage *Usage `json:"usage" bson:"-"`
 }
 
+// Address returns full node address with port.
 func (n *Node) Address() string {
 	return n.Host + ":" + n.Port
 }

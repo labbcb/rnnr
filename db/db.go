@@ -51,6 +51,7 @@ func (d *DB) UpdateTask(t *models.Task) error {
 		FindOneAndReplace(nil, bson.M{"_id": t.ID}, &t, options.FindOneAndReplace()).Err()
 }
 
+// FindByState retrieves from database tasks that match given states.
 func (d *DB) FindByState(states ...models.State) ([]*models.Task, error) {
 	filter := bson.M{"state": bson.M{"$in": states}}
 	cursor, err := d.client.Database(d.database).Collection(TaskCollection).Find(nil, filter, options.Find())
@@ -88,7 +89,7 @@ func (d *DB) AllTasks() ([]*models.Task, error) {
 	return ts, nil
 }
 
-// GetAllNodes returns all nodes
+// AllNodes returns all nodes.
 func (d *DB) AllNodes() ([]*models.Node, error) {
 	cursor, err := d.client.Database(d.database).Collection(NodeCollection).Find(nil, bson.D{{}}, options.Find())
 	if err != nil {

@@ -2,10 +2,11 @@ package master
 
 import (
 	"encoding/json"
-	"github.com/labbcb/rnnr/models"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
+
+	"github.com/labbcb/rnnr/models"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/mux"
 )

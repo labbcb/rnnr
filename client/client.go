@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,6 +12,7 @@ import (
 
 const contentType = "application/json"
 
+// ListTasks retrieves all tasks from server.
 func ListTasks(host string) (*models.ListTasksResponse, error) {
 	resp, err := http.Get(host + "/tasks")
 	if err != nil {
@@ -35,6 +35,7 @@ func ListTasks(host string) (*models.ListTasksResponse, error) {
 	return &r, nil
 }
 
+// GetTask retrieves task information given its ID.
 func GetTask(host, id string) (*models.Task, error) {
 	resp, err := http.Get(host + "/tasks/" + id)
 	if err != nil {
@@ -57,6 +58,7 @@ func GetTask(host, id string) (*models.Task, error) {
 	return &t, nil
 }
 
+// CancelTask cancels task by its ID.
 func CancelTask(host, id string) error {
 	resp, err := http.Post(host+"/tasks/"+id+":cancel", "application/json", nil)
 	if err != nil {
@@ -75,6 +77,7 @@ func CancelTask(host, id string) error {
 	return nil
 }
 
+// EnableNode subscribes or enables worker node.
 func EnableNode(host string, n *models.Node) (id string, err error) {
 	var b bytes.Buffer
 	if err := json.NewEncoder(&b).Encode(n); err != nil {
@@ -103,6 +106,7 @@ func EnableNode(host string, n *models.Node) (id string, err error) {
 	return res["host"], nil
 }
 
+// DisableNode disables worker nodes.
 func DisableNode(host, id string) error {
 	c := http.Client{}
 	req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/nodes/%s", host, id), nil)
@@ -125,6 +129,7 @@ func DisableNode(host, id string) error {
 	return nil
 }
 
+// ListNodes retrieves all worker nodes.
 func ListNodes(host string) ([]*models.Node, error) {
 	resp, err := http.Get(host + "/nodes")
 	if err != nil {
@@ -155,5 +160,5 @@ func raiseHTTPError(resp *http.Response) error {
 	if err != nil {
 		return err
 	}
-	return errors.New(fmt.Sprintf("%s: %s", resp.Status, b.String()))
+	return fmt.Errorf("%s: %s", resp.Status, b.String())
 }

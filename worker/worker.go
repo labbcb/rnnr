@@ -16,11 +16,13 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// Worker struct wraps service info and Docker connection.
 type Worker struct {
 	Info   *pb.Info
 	Docker *docker.Docker
 }
 
+// New creates a Worker.
 func New(cpuCores int32, ramGb float64) (*Worker, error) {
 	conn, err := docker.Connect()
 	if err != nil {
@@ -45,10 +47,12 @@ func New(cpuCores int32, ramGb float64) (*Worker, error) {
 	return worker, nil
 }
 
+// GetInfo returns service info.
 func (w *Worker) GetInfo(context.Context, *empty.Empty) (*pb.Info, error) {
 	return w.Info, nil
 }
 
+// RunContainer starts a Docker container.
 func (w *Worker) RunContainer(ctx context.Context, container *pb.Container) (*empty.Empty, error) {
 	if err := w.Docker.Run(ctx, container); err != nil {
 		log.WithFields(log.Fields{"id": container.Id, "image": container.Image, "error": err}).Error("Unable to run container.")
@@ -59,6 +63,7 @@ func (w *Worker) RunContainer(ctx context.Context, container *pb.Container) (*em
 	return &empty.Empty{}, nil
 }
 
+// CheckContainer checks if container is running.
 func (w *Worker) CheckContainer(ctx context.Context, container *pb.Container) (*pb.State, error) {
 	state, err := w.Docker.Check(ctx, container)
 	if err != nil {
@@ -74,6 +79,7 @@ func (w *Worker) CheckContainer(ctx context.Context, container *pb.Container) (*
 	return state, nil
 }
 
+// StopContainer stops and removes container.
 func (w *Worker) StopContainer(ctx context.Context, container *pb.Container) (*empty.Empty, error) {
 	if err := w.Docker.Stop(ctx, container.Id); err != nil {
 		log.WithFields(log.Fields{"id": container.Id, "error": err}).Error("Unable to stop container.")

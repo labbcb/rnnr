@@ -3,12 +3,14 @@ package master
 import (
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/labbcb/rnnr/models"
 	log "github.com/sirupsen/logrus"
-	"time"
 )
 
+// CreateTask creates a task with new ID and queue state.
 func (m *Master) CreateTask(t *models.Task) error {
 	switch len(t.Executors) {
 	case 0:
@@ -28,6 +30,7 @@ func (m *Master) CreateTask(t *models.Task) error {
 	return m.DB.SaveTask(t)
 }
 
+// GetTask returns a task by its ID.
 func (m *Master) GetTask(id string) (*models.Task, error) {
 	t, err := m.DB.GetTask(id)
 	if err != nil {
@@ -36,6 +39,7 @@ func (m *Master) GetTask(id string) (*models.Task, error) {
 	return t, nil
 }
 
+// CancelTask cancels a task by its ID.
 func (m *Master) CancelTask(id string) error {
 	task, err := m.GetTask(id)
 	if err != nil {
@@ -63,6 +67,7 @@ func (m *Master) CancelTask(id string) error {
 	return m.DB.UpdateTask(task)
 }
 
+// ListTasks returns all tasks.
 func (m *Master) ListTasks(namePrefix string, pageSize int, pageToken string, view models.View) (*models.ListTasksResponse, error) {
 	ts, err := m.DB.AllTasks()
 	if err != nil {
