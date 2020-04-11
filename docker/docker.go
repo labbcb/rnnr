@@ -39,7 +39,7 @@ func Connect() (*Docker, error) {
 // Run runs a container
 func (d *Docker) Run(ctx context.Context, container *pb.Container) error {
 	if err := d.pullImage(container.Image, ioutil.Discard); err != nil {
-		return err
+		log.WithError(err).WithField("image", container.Image).Warn("Unable to pull image.")
 	}
 
 	var env []string
@@ -111,8 +111,7 @@ func asTimestamp(s string) *timestamp.Timestamp {
 func (d *Docker) pullImage(image string, w io.Writer) error {
 	reader, err := d.client.ImagePull(context.Background(), image, types.ImagePullOptions{})
 	if err != nil {
-		log.WithError(err).Warn("Unable to pull image.")
-		return nil
+		return err
 	}
 	defer func() {
 		if err := reader.Close(); err != nil {
