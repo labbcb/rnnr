@@ -61,7 +61,10 @@ func (d *Docker) Stop(ctx context.Context, id string) error {
 	if err := d.client.ContainerStop(ctx, id, nil); err != nil {
 		return err
 	}
-	return d.client.ContainerRemove(ctx, id, types.ContainerRemoveOptions{Force: true})
+
+	d.removeContainer(ctx, id)
+
+	return nil
 }
 
 // Check verifies if container is still running.
@@ -79,6 +82,8 @@ func (d *Docker) Check(ctx context.Context, container *pb.Container) (*pb.State,
 	out, err := d.client.ContainerLogs(ctx, container.Id, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true})
 	_, err = stdcopy.StdCopy(&stdout, &stderr, out)
 
+	d.removeContainer(ctx, container.Id)
+
 	return &pb.State{
 		Exited:   true,
 		ExitCode: int32(resp.State.ExitCode),
@@ -87,6 +92,14 @@ func (d *Docker) Check(ctx context.Context, container *pb.Container) (*pb.State,
 		Stdout:   stdout.String(),
 		Stderr:   stderr.String(),
 	}, nil
+}
+
+func (d *Docker) removeContainer(ctx context.Context, id string) {
+	if err := d.client.ContainerRemove(ctx, id, types.ContainerRemoveOptions{Force: true}); err != nil {
+		log.WithError(err).Warn("Unable to remove container.")
+	} else {
+		log.WithField("id", id).Info("Removed container.")
+	}
 }
 
 func asTimestamp(s string) *timestamp.Timestamp {
@@ -98,7 +111,7 @@ func asTimestamp(s string) *timestamp.Timestamp {
 func (d *Docker) pullImage(image string, w io.Writer) error {
 	reader, err := d.client.ImagePull(context.Background(), image, types.ImagePullOptions{})
 	if err != nil {
-		log.Println(err)
+		log.WithError(err).Warn("Unable to pull image.")
 		return nil
 	}
 	defer func() {
