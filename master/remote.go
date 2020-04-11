@@ -48,17 +48,19 @@ func RemoteRun(task *models.Task, node *models.Node) error {
 
 	_, err = pb.NewWorkerClient(conn).RunContainer(context.Background(), asContainer(task))
 	if err != nil {
-		if status.Convert(err).Code() == codes.Internal {
+		s := status.Convert(err)
+		if s.Code() == codes.Internal {
 			task.State = models.SystemError
-			task.Logs = &models.Log{}
-			task.Logs.EndTime = time.Now()
-			task.Logs.SystemLogs = append(task.Logs.SystemLogs, err.Error())
+			task.Logs = &models.Log{
+				EndTime:    time.Now(),
+				SystemLogs: []string{s.Message()},
+			}
 		} else {
 			task.State = models.Queued
 			task.RemoteHost = ""
 			node.Active = false
 		}
-		return err
+		return s.Err()
 	}
 
 	task.State = models.Running
