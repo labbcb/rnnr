@@ -13,3 +13,8 @@
 
 .DS_Store
 .idea
+
+# Cromwell
+cromwell-*.jar
+cromwell-executions
+cromwell-workflow-logs

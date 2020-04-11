@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -18,6 +19,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/stdcopy"
 )
 
 // Docker struct wraps Docker client
@@ -73,11 +75,17 @@ func (d *Docker) Check(ctx context.Context, container *pb.Container) (*pb.State,
 		return &pb.State{}, nil
 	}
 
+	var stdout, stderr bytes.Buffer
+	out, err := d.client.ContainerLogs(ctx, container.Id, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true})
+	_, err = stdcopy.StdCopy(&stdout, &stderr, out)
+
 	return &pb.State{
 		Exited:   true,
 		ExitCode: int32(resp.State.ExitCode),
 		Start:    asTimestamp(resp.State.StartedAt),
 		End:      asTimestamp(resp.State.FinishedAt),
+		Stdout:   stdout.String(),
+		Stderr:   stderr.String(),
 	}, nil
 }
 

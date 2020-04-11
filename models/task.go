@@ -88,11 +88,11 @@ type Executor struct {
 
 // ExecutorLog represents processing times and logs of an executor
 type ExecutorLog struct {
-	StartTime time.Time `json:"start_time"`       // Time the executor started
-	EndTime   time.Time `json:"end_time"`         // Time the executor ended
-	Stdout    string    `json:"stdout,omitempty"` // Stdout content
-	Stderr    string    `json:"stderr,omitempty"` // Stderr content
-	ExitCode  int32     `json:"exit_code"`        // Exit code
+	StartTime time.Time `json:"start_time"` // Time the executor started
+	EndTime   time.Time `json:"end_time"`   // Time the executor ended
+	Stdout    string    `json:"stdout"`     // Stdout content
+	Stderr    string    `json:"stderr"`     // Stderr content
+	ExitCode  int32     `json:"exit_code"`  // Exit code
 }
 
 // OutputFileLog represents a log file
