@@ -23,7 +23,7 @@ func GetNodeResources(node *models.Node) (int32, float64, error) {
 	}
 	defer func() {
 		if err := conn.Close(); err != nil {
-			log.Fatal(err)
+			log.WithError(err).Fatal("Unable to close client connection.")
 		}
 	}()
 
@@ -34,45 +34,32 @@ func GetNodeResources(node *models.Node) (int32, float64, error) {
 	return info.CpuCores, info.RamGb, nil
 }
 
-// RemoteRun runs remotely a task.
-func RemoteRun(task *models.Task, node *models.Node) error {
-	conn, err := grpc.Dial(node.Address(), grpc.WithInsecure())
+// RemoteRun remotely runs a task as a container.
+func RemoteRun(task *models.Task, address string) error {
+	// create a connection with worker node
+	conn, err := grpc.Dial(address, grpc.WithInsecure())
 	if err != nil {
-		return err
+		return &NetworkError{err}
 	}
 	defer func() {
 		if err := conn.Close(); err != nil {
-			log.Fatal(err)
+			log.WithError(err).Fatal("Unable to close client connection.")
 		}
 	}()
 
+	// convert a task to a container and remotely runs it
 	_, err = pb.NewWorkerClient(conn).RunContainer(context.Background(), asContainer(task))
-	if err != nil {
-		s := status.Convert(err)
-		if s.Code() == codes.Internal {
-			task.State = models.SystemError
-			task.Logs = &models.Log{
-				EndTime:    time.Now(),
-				SystemLogs: []string{s.Message()},
-			}
-		} else {
-			task.State = models.Queued
-			task.RemoteHost = ""
-			node.Active = false
-		}
-		return s.Err()
+	if status.Code(err) == codes.Unavailable {
+		return &NetworkError{err}
 	}
-
-	task.State = models.Running
-	task.Logs.StartTime = time.Now()
 	return err
 }
 
 // RemoteCheck checks remotely a task.
-func RemoteCheck(task *models.Task, node *models.Node) error {
-	conn, err := grpc.Dial(node.Address(), grpc.WithInsecure())
+func RemoteCheck(task *models.Task, address string) error {
+	conn, err := grpc.Dial(address, grpc.WithInsecure())
 	if err != nil {
-		return err
+		return &NetworkError{err}
 	}
 	defer func() {
 		if err := conn.Close(); err != nil {
@@ -82,30 +69,21 @@ func RemoteCheck(task *models.Task, node *models.Node) error {
 
 	state, err := pb.NewWorkerClient(conn).CheckContainer(context.Background(), asContainer(task))
 	if err != nil {
-		if status.Convert(err).Code() == codes.Internal {
-			task.State = models.SystemError
-			task.Logs.SystemLogs = append(task.Logs.SystemLogs, err.Error())
-			return err
+		if status.Code(err) == codes.Unavailable {
+			return NetworkError{err}
 		}
-
-		task.State = models.Queued
-		task.RemoteHost = ""
-		node.Active = false
 		return err
 	}
 
-	if !state.Exited {
-		return nil
+	// task finished
+	if state.Exited {
+		if state.ExitCode == 0 {
+			task.State = models.Complete
+		} else {
+			task.State = models.ExecutorError
+		}
+		task.Logs.ExecutorLogs = executorLogs(state)
 	}
-
-	if state.ExitCode == 0 {
-		task.State = models.Complete
-	} else {
-		task.State = models.ExecutorError
-	}
-	task.Logs.EndTime = time.Now()
-	task.Logs.ExecutorLogs = executorLogs(state)
-
 	return nil
 }
 
@@ -113,9 +91,7 @@ func RemoteCheck(task *models.Task, node *models.Node) error {
 func RemoteCancel(task *models.Task, node *models.Node) error {
 	conn, err := grpc.Dial(node.Address(), grpc.WithInsecure())
 	if err != nil {
-		task.State = models.SystemError
-		task.Logs.EndTime = time.Now()
-		return err
+		return &NetworkError{err}
 	}
 	defer func() {
 		if err := conn.Close(); err != nil {
@@ -124,16 +100,10 @@ func RemoteCancel(task *models.Task, node *models.Node) error {
 	}()
 
 	_, err = pb.NewWorkerClient(conn).StopContainer(context.Background(), asContainer(task))
-	if err != nil {
-		task.State = models.SystemError
-		task.Logs.EndTime = time.Now()
-		task.Logs.SystemLogs = append(task.Logs.SystemLogs, err.Error())
-		return err
+	if status.Code(err) == codes.Unavailable {
+		return &NetworkError{err}
 	}
-
-	task.State = models.Canceled
-	task.Logs.EndTime = time.Now()
-	return nil
+	return err
 }
 
 func asContainer(t *models.Task) *pb.Container {

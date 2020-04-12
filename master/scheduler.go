@@ -67,9 +67,10 @@ func (m *Master) DisableNode(host string) error {
 		}
 
 		if err := RemoteCancel(task, node); err != nil {
-			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost, "error": err}).Error("Unable to remotely cancel task.")
+			log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.RemoteHost}).Warn("Unable to remotely cancel task.")
 		}
-		log.WithField("id", task.ID).Info("Task canceled.")
+
+		go m.enqueueTask(task)
 	}
 	return nil
 }
@@ -154,4 +155,15 @@ func (m *Master) UpdateNodesWorkload(nodes []*models.Node) error {
 	}
 
 	return nil
+}
+
+func (m *Master) enqueueTask(task *models.Task) {
+	task.State = models.Queued
+	task.Logs = &models.Log{}
+	task.RemoteHost = ""
+	if err := m.DB.UpdateTask(task); err != nil {
+		log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "error": err}).Error("Unable to update task.")
+		return
+	}
+	log.WithField("id", task.ID).Info("Task enqueued.")
 }
