@@ -56,13 +56,11 @@ func (d *Docker) Run(ctx context.Context, container *pb.Container) error {
 		env, mounts(container))
 }
 
-// Stop stops and removes a container
+// Stop stops a container
 func (d *Docker) Stop(ctx context.Context, id string) error {
 	if err := d.client.ContainerStop(ctx, id, nil); err != nil {
 		return err
 	}
-
-	d.removeContainer(ctx, id)
 
 	return nil
 }
@@ -82,8 +80,6 @@ func (d *Docker) Check(ctx context.Context, container *pb.Container) (*pb.State,
 	out, err := d.client.ContainerLogs(ctx, container.Id, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true})
 	_, err = stdcopy.StdCopy(&stdout, &stderr, out)
 
-	d.removeContainer(ctx, container.Id)
-
 	return &pb.State{
 		Exited:   true,
 		ExitCode: int32(resp.State.ExitCode),
@@ -94,11 +90,12 @@ func (d *Docker) Check(ctx context.Context, container *pb.Container) (*pb.State,
 	}, nil
 }
 
-func (d *Docker) removeContainer(ctx context.Context, id string) {
+// RemoveContainer removes a container.
+func (d *Docker) RemoveContainer(ctx context.Context, id string) {
 	if err := d.client.ContainerRemove(ctx, id, types.ContainerRemoveOptions{Force: true}); err != nil {
 		log.WithError(err).Warn("Unable to remove container.")
 	} else {
-		log.WithField("id", id).Info("Removed container.")
+		log.WithField("id", id).Info("Container removed.")
 	}
 }
 

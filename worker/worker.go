@@ -71,6 +71,7 @@ func (w *Worker) CheckContainer(ctx context.Context, container *pb.Container) (*
 
 	if state.Exited {
 		log.WithFields(log.Fields{"id": container.Id, "exitCode": state.ExitCode}).Info("Container exited.")
+		w.Docker.RemoveContainer(ctx, container.Id)
 	}
 
 	return state, nil
@@ -83,7 +84,8 @@ func (w *Worker) StopContainer(ctx context.Context, container *pb.Container) (*e
 		return nil, err
 	}
 
-	log.WithField("id", container.Id).Info("Stopped container.")
+	log.WithField("id", container.Id).Info("Container stopped.")
+	w.Docker.RemoveContainer(ctx, container.Id)
 	return &empty.Empty{}, nil
 }
 

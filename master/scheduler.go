@@ -1,7 +1,6 @@
 package master
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/labbcb/rnnr/models"
@@ -95,7 +94,7 @@ func (m *Master) RequestNode(resources *models.Resources) (*models.Node, error) 
 		return nil, err
 	}
 	if len(nodes) == 0 {
-		return nil, NoActiveNodes{errors.New("no active node")}
+		return nil, &NoActiveNodes{}
 	}
 
 	// Update workload of active nodes.
@@ -122,7 +121,7 @@ func (m *Master) RequestNode(resources *models.Resources) (*models.Node, error) 
 	}
 
 	if bestNode == nil {
-		return nil, NoEnoughResources{fmt.Errorf("no active node have enough resources: CPU=%d RAM=%.2fGB", resources.CPUCores, resources.RAMGb)}
+		return nil, &NoEnoughResources{}
 	}
 
 	return bestNode, nil
