@@ -3,16 +3,18 @@ version 1.0
 workflow SayHello {
 
     input {
-        String name = "World"
+        Array[String] names = ["Earth", "Mars", "Saturn"]
     }
 
-    call Hello {
+    scatter(name in names) {
+      call Hello {
         input:
             name = name
+      }
     }
 
     output {
-        String msg = Hello.msg
+        Array[String] msgs = Hello.msg
     }
 }
 
