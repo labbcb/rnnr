@@ -13,7 +13,7 @@ var logsCmd = &cobra.Command{
 	Use:   "logs",
 	Short: "Task logs",
 	Long: `Task provides many logs. By default it prints Task.Log.SystemLogs.
-	Use --stdout and --stderr to get Task.Log.ExecutorLogs.`,
+	Use --stdout and --stderr to get executor logs.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		host := viper.GetString("host")

@@ -1,12 +1,16 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"time"
+
 	"github.com/labbcb/rnnr/client"
 	"github.com/labbcb/rnnr/models"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"time"
 )
 
 var all bool
@@ -14,12 +18,20 @@ var all bool
 var tasksCmd = &cobra.Command{
 	Use:     "tasks",
 	Aliases: []string{"ls", "list"},
-	Short:   "ListTasks tasks",
-	Long:    "It will print only QUEUED and RUNNING tasks by default.",
+	Short:   "List active tasks",
+	Long:    "It will print only active tasks (QUEUED and RUNNING) tasks by default.",
 	Run: func(cmd *cobra.Command, args []string) {
 		host := viper.GetString("host")
 		resp, err := client.ListTasks(host)
 		fatalOnErr(err)
+
+		format := viper.GetString("format")
+		if format == "json" {
+			if err := json.NewEncoder(os.Stdout).Encode(resp.Tasks); err != nil {
+				log.Fatal(err)
+			}
+			return
+		}
 
 		fmt.Printf("%-36s   %-18s   %-14s   %s\n", "Task ID", "Resources", "State", "Name at server (elapsed time)")
 

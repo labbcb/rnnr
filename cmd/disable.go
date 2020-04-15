@@ -16,7 +16,7 @@ var disableCmd = &cobra.Command{
 		host := viper.GetString("host")
 		for _, id := range args {
 			if err := client.DisableNode(host, id); err != nil {
-				log.Printf("Unable to deactivate worker %s: %s\n", id, err)
+				log.Printf("Unable to disable worker %s: %s\n", id, err)
 			}
 		}
 	},

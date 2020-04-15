@@ -1,23 +1,35 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+
 	"github.com/labbcb/rnnr/client"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var nodesCmd = &cobra.Command{
 	Use:   "nodes",
-	Short: "ListTasks computing nodes",
+	Short: "List computing nodes",
 	Run: func(cmd *cobra.Command, args []string) {
 		host := viper.GetString("host")
-		ns, err := client.ListNodes(host)
+		nodes, err := client.ListNodes(host)
 		fatalOnErr(err)
+
+		format := viper.GetString("format")
+		if format == "json" {
+			if err := json.NewEncoder(os.Stdout).Encode(nodes); err != nil {
+				log.Fatal(err)
+			}
+			return
+		}
 
 		var status string
 		fmt.Printf("%-29s   %s   %-8s   %s\n", "Resources", "Tasks", "Status", "Host (port)")
-		for _, n := range ns {
+		for _, n := range nodes {
 			if n.Active {
 				status = "ACTIVE"
 			} else {

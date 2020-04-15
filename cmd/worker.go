@@ -1,12 +1,13 @@
 package cmd
 
 import (
+	"net"
+
 	"github.com/labbcb/rnnr/pb"
 	"github.com/labbcb/rnnr/worker"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
-	"net"
 )
 
 var port string

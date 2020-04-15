@@ -2,9 +2,10 @@ package cmd
 
 import (
 	"encoding/json"
+	"os"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"os"
 
 	"github.com/labbcb/rnnr/client"
 	"github.com/spf13/cobra"
@@ -18,13 +19,11 @@ var viewCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		host := viper.GetString("host")
 		for _, id := range args {
-			t, err := client.GetTask(host, id)
-			if err != nil {
-				log.Println(err)
-			} else {
-				if err := json.NewEncoder(os.Stdout).Encode(t); err != nil {
-					log.Println(err)
-				}
+			task, err := client.GetTask(host, id)
+			fatalOnErr(err)
+
+			if err := json.NewEncoder(os.Stdout).Encode(task); err != nil {
+				log.Fatal(err)
 			}
 		}
 	},
