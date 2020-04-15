@@ -78,9 +78,9 @@ func (m *Master) InitializeTasks() error {
 			}
 			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost}).Info("Task initialized.")
 		case *NoActiveNodes:
-			log.Debug("No active nodes")
+			log.Warn("No active nodes")
 		case *NoEnoughResources:
-			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "cpu": task.Resources.CPUCores, "ram": task.Resources.RAMGb}).Debug("No enough resources.")
+			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "cpu": task.Resources.CPUCores, "ram": task.Resources.RAMGb}).Warn("No enough resources.")
 		default:
 			log.WithError(err).WithFields(log.Fields{"id": task.ID, "name": task.Name}).Error("Unable to request node.")
 		}
@@ -107,7 +107,7 @@ func (m *Master) RunTasks() error {
 			task.State = models.Running
 			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost}).Info("Task running.")
 		case *NetworkError:
-			log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.RemoteHost}).Debug("Network error.")
+			log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.RemoteHost}).Warn("Network error.")
 		default:
 			task.State = models.SystemError
 			now := time.Now()
@@ -146,7 +146,7 @@ func (m *Master) CheckTasks() error {
 				log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost, "state": task.State}).Info("Task finished.")
 			}
 		case *NetworkError:
-			log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.RemoteHost}).Debug("Network error.")
+			log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.RemoteHost}).Warn("Network error.")
 		default:
 			task.State = models.SystemError
 			task.Logs.SystemLogs = append(task.Logs.SystemLogs, err.Error())
