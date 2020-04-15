@@ -70,7 +70,7 @@ func RemoteCheck(task *models.Task, address string) error {
 	state, err := pb.NewWorkerClient(conn).CheckContainer(context.Background(), asContainer(task))
 	if err != nil {
 		if status.Code(err) == codes.Unavailable {
-			return NetworkError{err}
+			return &NetworkError{err}
 		}
 		return err
 	}
