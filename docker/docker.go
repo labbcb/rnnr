@@ -78,7 +78,14 @@ func (d *Docker) Check(ctx context.Context, container *pb.Container) (*pb.State,
 
 	var stdout, stderr bytes.Buffer
 	out, err := d.client.ContainerLogs(ctx, container.Id, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true})
-	_, err = stdcopy.StdCopy(&stdout, &stderr, out)
+	if err != nil {
+		log.WithError(err).WithField("id", container.Id).Error("Unable to get container logs.")
+	} else {
+		_, err = stdcopy.StdCopy(&stdout, &stderr, out)
+		if err != nil {
+			log.WithError(err).WithField("id", container.Id).Warn("Unable to demultiplex container logs.")
+		}
+	}
 
 	return &pb.State{
 		Exited:   true,
