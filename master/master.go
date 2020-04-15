@@ -19,7 +19,7 @@ type Master struct {
 
 // New creates a server and initializes TES API and Node management endpoints.
 // database is URI to MongoDB (without database name, which is 'rnnr-master')
-func New(database string) (*Master, error) {
+func New(database string, sleepTime time.Duration) (*Master, error) {
 	connection, err := db.Connect(database, "rnnr")
 	if err != nil {
 		return nil, fmt.Errorf("connecting to MongoDB: %w", err)
@@ -35,7 +35,7 @@ func New(database string) (*Master, error) {
 		},
 	}
 	master.register()
-	go master.StartMonitor(5 * time.Second)
+	go master.StartMonitor(sleepTime)
 	return master, nil
 }
 
