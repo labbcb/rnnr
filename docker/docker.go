@@ -76,25 +76,33 @@ func (d *Docker) Check(ctx context.Context, container *pb.Container) (*pb.State,
 		return &pb.State{}, nil
 	}
 
-	var stdout, stderr bytes.Buffer
-	out, err := d.client.ContainerLogs(ctx, container.Id, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true})
-	if err != nil {
-		log.WithError(err).WithField("id", container.Id).Error("Unable to get container logs.")
-	} else {
-		_, err = stdcopy.StdCopy(&stdout, &stderr, out)
-		if err != nil {
-			log.WithError(err).WithField("id", container.Id).Warn("Unable to demultiplex container logs.")
-		}
-	}
-
+	stdout, stderr := d.getLogs(ctx, container.Id)
 	return &pb.State{
 		Exited:   true,
 		ExitCode: int32(resp.State.ExitCode),
 		Start:    asTimestamp(resp.State.StartedAt),
 		End:      asTimestamp(resp.State.FinishedAt),
-		Stdout:   stdout.String(),
-		Stderr:   stderr.String(),
+		Stdout:   stdout,
+		Stderr:   stderr,
 	}, nil
+}
+
+func (d *Docker) getLogs(ctx context.Context, id string) (stdout, stderr string) {
+	var bout, berr bytes.Buffer
+
+	out, err := d.client.ContainerLogs(ctx, id, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true})
+	if err != nil {
+		log.WithError(err).WithField("id", id).Error("Unable to get logs.")
+		return
+	}
+
+	_, err = stdcopy.StdCopy(&bout, &berr, out)
+	if err != nil {
+		log.WithError(err).WithField("id", id).Warn("Unable to demultiplex logs.")
+		return
+	}
+
+	return bout.String(), berr.String()
 }
 
 // RemoveContainer removes a container.
