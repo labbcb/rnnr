@@ -42,8 +42,8 @@ func (m *Master) EnableNode(node *models.Node) error {
 }
 
 // DisableNode updates node availability removing usage information.
-// Also cancels remote tasks and put them to queue.
-func (m *Master) DisableNode(host string) error {
+// Cancel argument will cancels remote tasks and puts them back to queue.
+func (m *Master) DisableNode(host string, cancel bool) error {
 	node, err := m.DB.GetNode(host)
 	if err != nil {
 		return err
@@ -58,6 +58,10 @@ func (m *Master) DisableNode(host string) error {
 	tasks, err := m.DB.FindByState(models.Initializing, models.Running, models.Paused)
 	if err != nil {
 		return err
+	}
+
+	if !cancel {
+		return nil
 	}
 
 	for _, task := range tasks {

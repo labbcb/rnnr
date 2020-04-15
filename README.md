@@ -36,6 +36,8 @@ java -Dconfig.file=examples/cromwell.conf -jar cromwell-49.jar run examples/hell
 Generate Go code from ProtoBuffer file
 
 ```bash
+go get -u google.golang.org/grpc
+go get -u github.com/golang/protobuf/protoc-gen-go
 protoc -I pb --go_out=plugins=grpc:pb pb/worker.proto 
 ```
 

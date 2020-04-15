@@ -109,9 +109,9 @@ type Log struct {
 	// Arbitrary logging metadata included by the implementation
 	Metadata map[string]string `json:"metadata,omitempty"`
 	// When the task started
-	StartTime time.Time `json:"start_time"`
+	StartTime *time.Time `json:"start_time,omitempty"`
 	// When the task ended
-	EndTime time.Time `json:"end_time"`
+	EndTime *time.Time `json:"end_time,omitempty"`
 	// Information about all output files
 	Outputs []*OutputFileLog `json:"outputs,omitempty"`
 	// System logs are any logs the system decides are relevant, which are not tied directly to an Executor process
@@ -129,7 +129,7 @@ type Task struct {
 	Resources    *Resources        `json:"resources,omitempty"`
 	Executors    []Executor        `json:"executors"`
 	Volumes      []string          `json:"volumes,omitempty"`
-	Tags         map[string]string `json:"tags,omitempty,omitempty"`
+	Tags         map[string]string `json:"tags,omitempty"`
 	Logs         *Log              `json:"logs,omitempty"`
 	CreationTime time.Time         `json:"creation_time"`
 

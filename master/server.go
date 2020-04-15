@@ -52,7 +52,8 @@ func (m *Master) CancelTask(id string) error {
 
 	if task.State == models.Queued || task.State == models.Initializing {
 		task.State = models.Canceled
-		task.Logs.EndTime = time.Now()
+		now := time.Now()
+		task.Logs.EndTime = &now
 		return m.DB.UpdateTask(task)
 	}
 

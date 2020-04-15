@@ -49,9 +49,9 @@ var tasksCmd = &cobra.Command{
 			switch task.State {
 			case models.Queued:
 			case models.Running:
-				desc = fmt.Sprintf("%s (%s)", desc, time.Since(task.Logs.StartTime))
+				desc = fmt.Sprintf("%s (%s)", desc, time.Since(*task.Logs.StartTime))
 			default:
-				desc = fmt.Sprintf("%s (%s)", desc, task.Logs.EndTime.Sub(task.Logs.StartTime))
+				desc = fmt.Sprintf("%s (%s)", desc, task.Logs.EndTime.Sub(*task.Logs.StartTime))
 			}
 			fmt.Printf("%36s | CPU=%02d RAM=%05.2fGB | %-14s | %s\n",
 				task.ID, task.Resources.CPUCores, task.Resources.RAMGb, task.State, desc)

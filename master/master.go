@@ -70,7 +70,8 @@ func (m *Master) InitializeTasks() error {
 		case nil:
 			task.RemoteHost = node.Host
 			task.State = models.Initializing
-			task.Logs.StartTime = time.Now()
+			now := time.Now()
+			task.Logs.StartTime = &now
 			if err := m.DB.UpdateTask(task); err != nil {
 				log.WithError(err).WithFields(log.Fields{"id": task.ID, "name": task.Name}).Error("Unable to update task.")
 				continue
@@ -109,7 +110,8 @@ func (m *Master) RunTasks() error {
 			log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.RemoteHost}).Debug("Network error.")
 		default:
 			task.State = models.SystemError
-			task.Logs.EndTime = time.Now()
+			now := time.Now()
+			task.Logs.EndTime = &now
 			task.Logs.SystemLogs = []string{err.Error()}
 			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost, "state": task.State, "error": err}).Error("Unable to run task.")
 		}
@@ -139,7 +141,8 @@ func (m *Master) CheckTasks() error {
 		switch err := RemoteCheck(task, node.Address()).(type) {
 		case nil:
 			if task.State != models.Running {
-				task.Logs.EndTime = time.Now()
+				now := time.Now()
+				task.Logs.EndTime = &now
 				log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost, "state": task.State}).Info("Task finished.")
 			}
 		case *NetworkError:

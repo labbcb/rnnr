@@ -106,14 +106,15 @@ func EnableNode(host string, n *models.Node) (id string, err error) {
 	return res["host"], nil
 }
 
-// DisableNode disables worker nodes.
-func DisableNode(host, id string) error {
-	c := http.Client{}
-	req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/nodes/%s", host, id), nil)
-	if err != nil {
-		return fmt.Errorf("creating node deactivation request: %w", err)
+// DisableNode disables worker node.
+// Cancel tells server to cancel running tasks in node and enqueue those tasks.
+func DisableNode(host, id string, cancel bool) error {
+	var b bytes.Buffer
+	if err := json.NewEncoder(&b).Encode(cancel); err != nil {
+		return fmt.Errorf("encoding cancel option to json: %w", err)
 	}
-	resp, err := c.Do(req)
+
+	resp, err := http.Post(fmt.Sprintf("%s/nodes/%s:disable", host, id), contentType, &b)
 	if err != nil {
 		return err
 	}

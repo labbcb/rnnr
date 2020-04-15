@@ -15,7 +15,7 @@ import (
 func (m *Master) register() {
 	m.Router.HandleFunc("/nodes", m.handleListNodes()).Methods(http.MethodGet)
 	m.Router.HandleFunc("/nodes", m.handleEnableNode()).Methods(http.MethodPost)
-	m.Router.HandleFunc("/nodes/{id}", m.handleDisableNode()).Methods(http.MethodDelete)
+	m.Router.HandleFunc("/nodes/{id}:disable", m.handleDisableNode()).Methods(http.MethodPost)
 
 	m.Router.HandleFunc("/tasks", m.handleListTasks()).Methods(http.MethodGet)
 	m.Router.HandleFunc("/tasks", m.handleCreateTask()).Methods(http.MethodPost)
@@ -73,8 +73,15 @@ func (m *Master) handleEnableNode() http.HandlerFunc {
 
 func (m *Master) handleDisableNode() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var cancel bool
+		if err := json.NewDecoder(r.Body).Decode(&cancel); err != nil {
+			log.WithField("error", err).Error("Unable to decode JSON.")
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
 		host := mux.Vars(r)["id"]
-		if err := m.DisableNode(host); err != nil {
+		if err := m.DisableNode(host, cancel); err != nil {
 			log.WithFields(log.Fields{"host": host, "error": err}).Error("Unable to disable node.")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
