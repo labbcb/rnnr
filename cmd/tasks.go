@@ -4,10 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/labbcb/rnnr/client"
-	"github.com/labbcb/rnnr/models"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -46,15 +44,8 @@ var tasksCmd = &cobra.Command{
 				desc = task.Name
 			}
 
-			switch task.State {
-			case models.Queued:
-			case models.Running:
-				desc = fmt.Sprintf("%s (%s)", desc, time.Since(*task.Logs.StartTime))
-			default:
-				desc = fmt.Sprintf("%s (%s)", desc, task.Logs.EndTime.Sub(*task.Logs.StartTime))
-			}
-			fmt.Printf("%36s | CPU=%02d RAM=%05.2fGB | %-14s | %s\n",
-				task.ID, task.Resources.CPUCores, task.Resources.RAMGb, task.State, desc)
+			fmt.Printf("%36s | CPU=%02d RAM=%05.2fGB | %-14s | %s (%s)\n",
+				task.ID, task.Resources.CPUCores, task.Resources.RAMGb, task.State, desc, task.Elapsed())
 		}
 	},
 }

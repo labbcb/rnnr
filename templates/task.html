@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
+    <title>Task {{.ID}}</title>
+  </head>
+  <body>
+    <nav class="navbar navbar-light bg-light">
+        <a class="navbar-brand font-italic" href="/">RNNR</a>
+    </nav>
+
+    <br/>
+
+    <div class="container-fluid">
+        <div class="table-responsive">
+            <table class="table table-borderless table-striped">
+                <tbody>
+                    <tr>
+                        <th scope="row">Task ID</th>
+                        <td>{{.ID}}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">State</th>
+                        <td>{{.State}}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Name</th>
+                        <td>{{.Name}}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Description</th>
+                        <td>{{.Description}}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Created</th>
+                        <td>{{.CreationTime}}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">CPU cores</th>
+                        <td>{{.Resources.CPUCores}}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">RAM (in GB)</th>
+                        <td>{{.Resources.RAMGb}}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Inputs</th>
+                        <td>
+                            {{range .Inputs}}
+                            <p>
+                            <table class="table">
+                                <tbody>
+                                    <tr>
+                                        <th scope="row">Name</th>
+                                        <td>{{.Name}}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Description</th>
+                                        <td>{{.Description}}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">URL</th>
+                                        <td><code>{{.URL}}</code></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Path</th>
+                                        <td><code>{{.Path}}</code></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Type</th>
+                                        <td>{{.Type}}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Content</th>
+                                        <td>{{.Content}}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            </p>
+                            {{end}}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Tags</th>
+                        <td>{{.Tags}}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Outputs</th>
+                        <td>
+                            {{range .Outputs}}
+                            <table class="table">
+                                <tbody>
+                                    <tr>
+                                        <th scope="row">Name</th>
+                                        <td>{{.Name}}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Description</th>
+                                        <td>{{.Description}}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">URL</th>
+                                        <td><code>{{.URL}}</code></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Path</th>
+                                        <td><code>{{.Path}}</code></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Type</th>
+                                        <td>{{.Type}}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            {{end}}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Volumes</th>
+                        <td>{{.Volumes}}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Executors</th>
+                        <td>
+                            {{range .Executors}}
+                            <table class="table">
+                                <tbody>
+                                    <tr>
+                                        <th scope="row">Image</th>
+                                        <td>{{.Image}}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Command</th>
+                                        <td><code>{{range .Command}}{{.}} {{end}}</code></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Working directory</th>
+                                        <td>{{.WorkDir}}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Path to stdin</th>
+                                        <td><code>{{.Stdin}}</code></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Path to stdout</th>
+                                        <td><code>{{.Stdout}}</code></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Path to stderr</th>
+                                        <td><code>{{.Stderr}}</code></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Environment variables</th>
+                                        <td>{{.Env}}</td>
+                                    </tr>
+                                    {{end}}
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Logs</th>
+                        <td>
+                            <table class="table">
+                                <tbody>
+                                    {{with .Logs}}
+                                    <tr>
+                                        <th scope="row">Metadata</th>
+                                        <td>{{.Metadata}}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">StartTime</th>
+                                        <td>{{.StartTime}}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">EndTime</th>
+                                        <td>{{.EndTime}}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Outputs</th>
+                                        <td>{{.Outputs}}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">SystemLogs</th>
+                                        <td>{{.SystemLogs}}</td>
+                                    </tr>
+                                    {{end}}
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Executor logs</th>
+                        <td>
+                            {{range .Logs.ExecutorLogs}}
+                            <table class="table">
+                                <tbody>
+                                    <tr>
+                                        <th scope="row">StartTime</th>
+                                        <td>{{.StartTime}}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">EndTime</th>
+                                        <td>{{.EndTime}}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Stdout</th>
+                                        <td>{{.Stdout}}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Stderr</th>
+                                        <td>{{.Stderr}}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">ExitCode</th>
+                                        <td>{{.ExitCode}}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            {{end}}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+  </body>
+</html>

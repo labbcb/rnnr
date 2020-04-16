@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"text/template"
 
 	"github.com/labbcb/rnnr/models"
 	log "github.com/sirupsen/logrus"
@@ -11,8 +12,12 @@ import (
 	"github.com/gorilla/mux"
 )
 
+var templates = template.Must(template.ParseFiles("templates/index.html", "templates/task.html"))
+
 // Register binds endpoints for node management
 func (m *Master) register() {
+	m.Router.HandleFunc("/", m.handleIndex()).Methods(http.MethodGet)
+
 	m.Router.HandleFunc("/nodes", m.handleListNodes()).Methods(http.MethodGet)
 	m.Router.HandleFunc("/nodes", m.handleEnableNode()).Methods(http.MethodPost)
 	m.Router.HandleFunc("/nodes/{id}:disable", m.handleDisableNode()).Methods(http.MethodPost)
@@ -22,7 +27,42 @@ func (m *Master) register() {
 	m.Router.HandleFunc("/tasks/{id}", m.handleGetTask()).Methods(http.MethodGet)
 	m.Router.HandleFunc("/tasks/{id}:cancel", m.handleCancelTask()).Methods(http.MethodPost)
 	m.Router.HandleFunc("/tasks/service-info", m.handleGetServiceInfo()).Methods(http.MethodGet)
+}
 
+func (m *Master) handleIndex() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		nodes, err := m.GetAllNodes()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if err := m.UpdateNodesWorkload(nodes); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		vars := mux.Vars(r)
+		pageSize, _ := strconv.Atoi(vars["pageSize"])
+		pageToken := vars["pageToken"]
+		view := models.View(vars["view"])
+		tasks, err := m.ListTasks(vars["namePrefix"], pageSize, pageToken, view)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		data := struct {
+			Nodes []*models.Node
+			Tasks []*models.Task
+		}{
+			nodes,
+			tasks.Tasks,
+		}
+
+		if err := templates.ExecuteTemplate(w, "index.html", data); err != nil {
+			log.WithError(err).Error("Problems with tamplate.")
+		}
+	}
 }
 
 func (m *Master) handleListNodes() http.HandlerFunc {
@@ -124,7 +164,15 @@ func (m *Master) handleGetTask() http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		}
-		encodeJSON(w, task)
+
+		if r.Header.Get("Content-type") == "JSON" {
+			encodeJSON(w, task)
+			return
+		}
+
+		if err := templates.ExecuteTemplate(w, "task.html", task); err != nil {
+			log.WithError(err).Error("Problems with tamplate.")
+		}
 	}
 }
 

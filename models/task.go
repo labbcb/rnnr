@@ -184,3 +184,16 @@ func (t *Task) String() string {
 	}
 	return fmt.Sprintf("task %s CPU=%d RAM=%.2f %s%s", t.ID, t.Resources.CPUCores, t.Resources.RAMGb, t.State, host)
 }
+
+// Elapsed computes elapsed time of task execution.
+func (t *Task) Elapsed() time.Duration {
+	if t.State == Complete {
+		return t.Logs.EndTime.Sub(*t.Logs.StartTime)
+	}
+
+	if t.State == Running {
+		return time.Since(*t.Logs.StartTime)
+	}
+
+	return time.Duration(0)
+}
