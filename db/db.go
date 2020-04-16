@@ -52,9 +52,20 @@ func (d *DB) UpdateTask(t *models.Task) error {
 }
 
 // FindByState retrieves from database tasks that match given states.
-func (d *DB) FindByState(states ...models.State) ([]*models.Task, error) {
-	filter := bson.M{"state": bson.M{"$in": states}}
-	cursor, err := d.client.Database(d.database).Collection(TaskCollection).Find(nil, filter, options.Find())
+func (d *DB) FindByState(limit, skip int64, states ...models.State) ([]*models.Task, error) {
+	var opts *options.FindOptions
+	if limit > 0 {
+		opts = &options.FindOptions{Limit: &limit, Skip: &skip}
+	} else {
+		opts = &options.FindOptions{Limit: nil, Skip: &skip}
+	}
+
+	var filter bson.M
+	if len(states) != 0 {
+		filter = bson.M{"state": bson.M{"$in": states}}
+	}
+
+	cursor, err := d.client.Database(d.database).Collection(TaskCollection).Find(nil, filter, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -69,24 +80,6 @@ func (d *DB) FindByState(states ...models.State) ([]*models.Task, error) {
 		return nil, err
 	}
 	return tasks, nil
-}
-
-// AllTasks returns all tasks stored in database
-func (d *DB) AllTasks() ([]*models.Task, error) {
-	var ts []*models.Task
-	cursor, err := d.client.Database(d.database).Collection(TaskCollection).Find(nil, bson.D{{}}, options.Find())
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err := cursor.Close(nil); err != nil {
-			log.Fatal(err)
-		}
-	}()
-	if err := cursor.All(nil, &ts); err != nil {
-		return nil, err
-	}
-	return ts, nil
 }
 
 // AllNodes returns all nodes.

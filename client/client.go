@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 
 	"github.com/labbcb/rnnr/models"
 )
@@ -13,8 +14,22 @@ import (
 const contentType = "application/json"
 
 // ListTasks retrieves all tasks from server.
-func ListTasks(host string) (*models.ListTasksResponse, error) {
-	resp, err := http.Get(host + "/tasks")
+func ListTasks(host string, pageSize int, pageToken string, view models.View, states []models.State) (*models.ListTasksResponse, error) {
+	u, err := url.Parse(host + "/tasks")
+	if err != nil {
+		return nil, err
+	}
+
+	v := url.Values{}
+	v.Set("pageSize", string(pageSize))
+	v.Set("pageToken", pageToken)
+	v.Set("view", string(view))
+	for _, state := range states {
+		v.Add("state", string(state))
+	}
+	u.RawQuery = v.Encode()
+
+	resp, err := http.Get(u.String())
 	if err != nil {
 		return nil, err
 	}

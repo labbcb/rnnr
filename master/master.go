@@ -59,7 +59,7 @@ func (m *Master) StartMonitor(sleepTime time.Duration) {
 
 // InitializeTasks selects a worker node to execute queued tasks.
 func (m *Master) InitializeTasks() error {
-	tasks, err := m.DB.FindByState(models.Queued)
+	tasks, err := m.DB.FindByState(0, 0, models.Queued)
 	if err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func (m *Master) InitializeTasks() error {
 
 // RunTasks tries to start initialized tasks.
 func (m *Master) RunTasks() error {
-	tasks, err := m.DB.FindByState(models.Initializing)
+	tasks, err := m.DB.FindByState(0, 0, models.Initializing)
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func (m *Master) RunTasks() error {
 // CheckTasks will iterate over running tasks checking if they have been completed well or not.
 // It runs concurrently.
 func (m *Master) CheckTasks() error {
-	tasks, err := m.DB.FindByState(models.Running)
+	tasks, err := m.DB.FindByState(0, 0, models.Running)
 	if err != nil {
 		return err
 	}

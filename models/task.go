@@ -168,13 +168,14 @@ const (
 	Full View = "FULL"
 )
 
-// Active returns true if task state is
-// - Queued
-// - Initializing
-// - Running
-// - Paused
+// Active returns true if task is active (queued, initializing, running and paused).
 func (t *Task) Active() bool {
 	return t.State == Queued || t.State == Initializing || t.State == Running || t.State == Paused
+}
+
+// Failed returns true if task failed (executor error and system error).
+func (t *Task) Failed() bool {
+	return t.State == ExecutorError || t.State == SystemError
 }
 
 func (t *Task) String() string {

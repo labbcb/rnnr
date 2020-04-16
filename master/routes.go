@@ -41,11 +41,18 @@ func (m *Master) handleIndex() http.HandlerFunc {
 			return
 		}
 
-		vars := mux.Vars(r)
-		pageSize, _ := strconv.Atoi(vars["pageSize"])
-		pageToken := vars["pageToken"]
-		view := models.View(vars["view"])
-		tasks, err := m.ListTasks(vars["namePrefix"], pageSize, pageToken, view)
+		v := r.URL.Query()
+		namePrefix := v.Get("namePrefix")
+		pageSize, _ := strconv.ParseInt(v.Get("pageSize"), 10, 64)
+		pageToken, _ := strconv.ParseInt(v.Get("pageToken"), 10, 64)
+		view := models.View(v.Get("view"))
+
+		var states []models.State
+		for _, state := range v["state"] {
+			states = append(states, models.State(state))
+		}
+
+		tasks, err := m.ListTasks(namePrefix, pageSize, pageToken, view, states)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -178,11 +185,18 @@ func (m *Master) handleGetTask() http.HandlerFunc {
 
 func (m *Master) handleListTasks() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		pageSize, _ := strconv.Atoi(vars["pageSize"])
-		pageToken := vars["pageToken"]
-		view := models.View(vars["view"])
-		tasks, err := m.ListTasks(vars["namePrefix"], pageSize, pageToken, view)
+		v := r.URL.Query()
+		namePrefix := v.Get("namePrefix")
+		pageSize, _ := strconv.ParseInt(v.Get("pageSize"), 10, 64)
+		pageToken, _ := strconv.ParseInt(v.Get("pageToken"), 10, 64)
+		view := models.View(v.Get("view"))
+
+		var states []models.State
+		for _, state := range v["state"] {
+			states = append(states, models.State(state))
+		}
+
+		tasks, err := m.ListTasks(namePrefix, pageSize, pageToken, view, states)
 		if err != nil {
 			log.WithFields(log.Fields{"pageSize": pageSize, "pageToken": pageToken, "view": view, "error": err}).Fatal("Unable to get all tasks.")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
