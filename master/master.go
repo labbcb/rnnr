@@ -80,7 +80,6 @@ func (m *Master) InitializeTasks() error {
 		case *NoActiveNodes:
 			log.Warn("No active nodes")
 		case *NoEnoughResources:
-			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "cpu": task.Resources.CPUCores, "ram": task.Resources.RAMGb}).Warn("No enough resources.")
 		default:
 			log.WithError(err).WithFields(log.Fields{"id": task.ID, "name": task.Name}).Error("Unable to request node.")
 		}
