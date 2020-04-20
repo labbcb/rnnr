@@ -127,14 +127,14 @@ type Task struct {
 	Inputs       []*Input          `json:"inputs,omitempty"`
 	Outputs      []*Output         `json:"outputs,omitempty"`
 	Resources    *Resources        `json:"resources,omitempty"`
-	Executors    []Executor        `json:"executors"`
+	Executors    []Executor        `json:"executors,omitempty"`
 	Volumes      []string          `json:"volumes,omitempty"`
 	Tags         map[string]string `json:"tags,omitempty"`
 	Logs         *Log              `json:"logs,omitempty"`
-	CreationTime time.Time         `json:"creation_time"`
+	CreationTime *time.Time        `json:"creation_time,omitempty"`
 
 	// These fields extend TES API allowing client to know which node is processing the task.
-	RemoteHost string `json:"remote_host"`
+	RemoteHost string `json:"remote_host,omitempty"`
 }
 
 // ListTasksResponse represents a list of tasks previous submitted to system
@@ -159,10 +159,10 @@ const (
 	// Minimal returns only task ID and state
 	Minimal View = "MINIMAL"
 	// Basic returns all fields except
-	// - Task.ExecutorLog.Stdout
-	// - Task.ExecutorLog.Stderr
-	// - Input.Content
-	// - TaskLog.SystemLogs
+	// - Logs.ExecutorLogs.Stdout
+	// - Logs.ExecutorLogs.Stderr
+	// - Inputs.Content
+	// - Logs.SystemLogs
 	Basic View = "BASIC"
 	// Full returns all fields
 	Full View = "FULL"

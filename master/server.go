@@ -20,8 +20,10 @@ func (m *Master) CreateTask(t *models.Task) error {
 		return fmt.Errorf("multiple executors not supported, got %d executors", len(t.Executors))
 	}
 
+	now := time.Now()
+
 	t.ID = uuid.New().String()
-	t.CreationTime = time.Now()
+	t.CreationTime = &now
 	t.State = models.Queued
 	t.Logs = &models.Log{}
 	if t.Resources.CPUCores == 0 {
@@ -70,7 +72,7 @@ func (m *Master) CancelTask(id string) error {
 
 // ListTasks returns all tasks.
 func (m *Master) ListTasks(namePrefix string, limit int64, start int64, view models.View, states []models.State) (*models.ListTasksResponse, error) {
-	ts, err := m.DB.FindByState(limit, start, states...)
+	ts, err := m.DB.FindByState(limit, start, view, states...)
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve all tasks: %w", err)
 	}

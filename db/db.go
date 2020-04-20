@@ -52,18 +52,34 @@ func (d *DB) UpdateTask(t *models.Task) error {
 }
 
 // FindByState retrieves from database tasks that match given states.
-func (d *DB) FindByState(limit, skip int64, states ...models.State) ([]*models.Task, error) {
-	var opts *options.FindOptions
+func (d *DB) FindByState(limit, skip int64, view models.View, states ...models.State) ([]*models.Task, error) {
+	var opts *options.FindOptions = options.Find()
 	if limit > 0 {
-		opts = &options.FindOptions{Limit: &limit, Skip: &skip}
-	} else {
-		opts = &options.FindOptions{Limit: nil, Skip: &skip}
+		opts.SetLimit(limit)
 	}
+	opts.SetSkip(skip)
 
 	var filter bson.M
 	if len(states) != 0 {
 		filter = bson.M{"state": bson.M{"$in": states}}
 	}
+
+	var projection bson.M
+	switch view {
+	case models.Minimal:
+		projection = bson.M{
+			"_id":   1,
+			"state": 1,
+		}
+	case models.Basic:
+		projection = bson.M{
+			"Logs.ExecutorLog.Stdout": 0,
+			"Logs.ExecutorLog.Stderr": 0,
+			"Input.Content":           0,
+			"Logs.SystemLogs":         0,
+		}
+	}
+	opts.SetProjection(projection)
 
 	cursor, err := d.client.Database(d.database).Collection(TaskCollection).Find(nil, filter, opts)
 	if err != nil {

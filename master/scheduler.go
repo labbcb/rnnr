@@ -55,7 +55,7 @@ func (m *Master) DisableNode(host string, cancel bool) error {
 		return err
 	}
 
-	tasks, err := m.DB.FindByState(0, 0, models.Initializing, models.Running, models.Paused)
+	tasks, err := m.DB.FindByState(0, 0, models.Full, models.Initializing, models.Running, models.Paused)
 	if err != nil {
 		return err
 	}
@@ -134,7 +134,7 @@ func (m *Master) RequestNode(resources *models.Resources) (*models.Node, error) 
 // UpdateNodesWorkload gets active tasks (Initializing or Running) and update node usage.
 func (m *Master) UpdateNodesWorkload(nodes []*models.Node) error {
 	usage := make(map[string]*models.Usage)
-	tasks, err := m.DB.FindByState(0, 0, models.Initializing, models.Running)
+	tasks, err := m.DB.FindByState(0, 0, models.Full, models.Initializing, models.Running)
 	if err != nil {
 		return err
 	}
