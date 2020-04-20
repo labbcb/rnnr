@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"text/template"
 
 	"github.com/labbcb/rnnr/models"
 	log "github.com/sirupsen/logrus"
@@ -12,12 +11,8 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var templates = template.Must(template.ParseFiles("templates/index.html", "templates/task.html"))
-
 // Register binds endpoints for node management
 func (m *Master) register() {
-	m.Router.HandleFunc("/", m.handleIndex()).Methods(http.MethodGet)
-
 	m.Router.HandleFunc("/nodes", m.handleListNodes()).Methods(http.MethodGet)
 	m.Router.HandleFunc("/nodes", m.handleEnableNode()).Methods(http.MethodPost)
 	m.Router.HandleFunc("/nodes/{id}:disable", m.handleDisableNode()).Methods(http.MethodPost)
@@ -27,49 +22,6 @@ func (m *Master) register() {
 	m.Router.HandleFunc("/tasks/{id}", m.handleGetTask()).Methods(http.MethodGet)
 	m.Router.HandleFunc("/tasks/{id}:cancel", m.handleCancelTask()).Methods(http.MethodPost)
 	m.Router.HandleFunc("/tasks/service-info", m.handleGetServiceInfo()).Methods(http.MethodGet)
-}
-
-func (m *Master) handleIndex() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		nodes, err := m.GetAllNodes()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if err := m.UpdateNodesWorkload(nodes); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		v := r.URL.Query()
-		namePrefix := v.Get("namePrefix")
-		pageSize, _ := strconv.ParseInt(v.Get("pageSize"), 10, 64)
-		pageToken, _ := strconv.ParseInt(v.Get("pageToken"), 10, 64)
-		view := models.View(v.Get("view"))
-
-		var states []models.State
-		for _, state := range v["state"] {
-			states = append(states, models.State(state))
-		}
-
-		tasks, err := m.ListTasks(namePrefix, pageSize, pageToken, view, states)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		data := struct {
-			Nodes []*models.Node
-			Tasks []*models.Task
-		}{
-			nodes,
-			tasks.Tasks,
-		}
-
-		if err := templates.ExecuteTemplate(w, "index.html", data); err != nil {
-			log.WithError(err).Error("Problems with tamplate.")
-		}
-	}
 }
 
 func (m *Master) handleListNodes() http.HandlerFunc {
@@ -172,14 +124,7 @@ func (m *Master) handleGetTask() http.HandlerFunc {
 			return
 		}
 
-		if r.Header.Get("Content-type") == "JSON" {
-			encodeJSON(w, task)
-			return
-		}
-
-		if err := templates.ExecuteTemplate(w, "task.html", task); err != nil {
-			log.WithError(err).Error("Problems with tamplate.")
-		}
+		encodeJSON(w, task)
 	}
 }
 
