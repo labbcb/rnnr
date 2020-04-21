@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/labbcb/rnnr/client"
 	"github.com/labbcb/rnnr/models"
 	log "github.com/sirupsen/logrus"
@@ -19,7 +17,7 @@ var cancelCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		host := viper.GetString("host")
 
-		if all {
+		if allTasks {
 			activeStates := []models.State{models.Queued, models.Initializing, models.Running, models.Paused}
 			tasks, err := client.ListTasks(host, 0, "", models.Minimal, activeStates)
 			fatalOnErr(err)
@@ -28,7 +26,6 @@ var cancelCmd = &cobra.Command{
 					log.Printf("Unable to cancel models %s: %v\n", task.ID, err)
 					continue
 				}
-				fmt.Println(task.ID)
 			}
 		}
 
