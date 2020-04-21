@@ -55,26 +55,30 @@ func (m *Master) DisableNode(host string, cancel bool) error {
 		return err
 	}
 
-	tasks, err := m.DB.FindByState(0, 0, models.Full, models.Initializing, models.Running, models.Paused)
-	if err != nil {
-		return err
-	}
-
 	if !cancel {
 		return nil
 	}
 
-	for _, task := range tasks {
-		if task.RemoteHost != node.Host {
-			continue
+	go func() {
+		tasks, err := m.DB.FindByState(0, 0, models.Full, models.Initializing, models.Running, models.Paused)
+		if err != nil {
+			log.WithError(err).Warn("Unable to get tasks to cancel.")
+			return
 		}
 
-		if err := RemoteCancel(task, node); err != nil {
-			log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.RemoteHost}).Warn("Unable to remotely cancel task.")
-		}
+		for _, task := range tasks {
+			if task.RemoteHost != node.Host {
+				continue
+			}
 
-		go m.enqueueTask(task)
-	}
+			if err := RemoteCancel(task, node); err != nil {
+				log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.RemoteHost}).Warn("Unable to remotely cancel task.")
+			}
+
+			go m.enqueueTask(task)
+		}
+	}()
+
 	return nil
 }
 
