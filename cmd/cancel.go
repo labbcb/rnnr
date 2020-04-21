@@ -41,6 +41,6 @@ var cancelCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.Flags().BoolVarP(&allTasks, "all", "a", false, "Cancel all active tasks.")
+	cancelCmd.Flags().BoolVarP(&allTasks, "all", "a", false, "Cancel all active tasks.")
 	rootCmd.AddCommand(cancelCmd)
 }
