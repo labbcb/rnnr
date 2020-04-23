@@ -74,7 +74,7 @@ func (m *Master) CancelTask(id string) error {
 func (m *Master) ListTasks(namePrefix string, limit int64, start int64, view models.View, states []models.State) (*models.ListTasksResponse, error) {
 	ts, err := m.DB.FindByState(limit, start, view, states...)
 	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve all tasks: %w", err)
+		return nil, fmt.Errorf("Unable to retrieve all tasks: %w", err)
 	}
 	return &models.ListTasksResponse{Tasks: ts}, nil
 }

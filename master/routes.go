@@ -15,6 +15,7 @@ import (
 func (m *Master) register() {
 	m.Router.HandleFunc("/nodes", m.handleListNodes()).Methods(http.MethodGet)
 	m.Router.HandleFunc("/nodes", m.handleEnableNode()).Methods(http.MethodPost)
+	m.Router.HandleFunc("/nodes/{id}", m.handleGetNode()).Methods(http.MethodGet)
 	m.Router.HandleFunc("/nodes/{id}:disable", m.handleDisableNode()).Methods(http.MethodPost)
 
 	m.Router.HandleFunc("/tasks", m.handleListTasks()).Methods(http.MethodGet)
@@ -67,6 +68,20 @@ func (m *Master) handleEnableNode() http.HandlerFunc {
 			log.WithField("error", err).Error("Unable to encode JSON.")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
+	}
+}
+
+func (m *Master) handleGetNode() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := mux.Vars(r)["id"]
+		node, err := m.DB.GetNode(id)
+		if err != nil {
+			log.WithFields(log.Fields{"id": id, "error": err}).Error("Unable to get node.")
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		encodeJSON(w, node)
 	}
 }
 
