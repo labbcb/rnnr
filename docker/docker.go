@@ -1,7 +1,6 @@
 package docker
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -20,7 +19,6 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/stdcopy"
 )
 
 // Docker struct wraps Docker client
@@ -81,33 +79,12 @@ func (d *Docker) Check(ctx context.Context, container *pb.Container) (*pb.State,
 		}, nil
 	}
 
-	stdout, stderr := d.getLogs(ctx, container.Id)
 	return &pb.State{
 		Exited:   true,
 		ExitCode: int32(resp.State.ExitCode),
 		Start:    asTimestamp(resp.State.StartedAt),
 		End:      asTimestamp(resp.State.FinishedAt),
-		Stdout:   stdout,
-		Stderr:   stderr,
 	}, nil
-}
-
-func (d *Docker) getLogs(ctx context.Context, id string) (stdout, stderr string) {
-	var bout, berr bytes.Buffer
-
-	out, err := d.client.ContainerLogs(ctx, id, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true})
-	if err != nil {
-		log.WithError(err).WithField("id", id).Error("Unable to get logs.")
-		return
-	}
-
-	_, err = stdcopy.StdCopy(&bout, &berr, out)
-	if err != nil {
-		log.WithError(err).WithField("id", id).Warn("Unable to demultiplex logs.")
-		return
-	}
-
-	return bout.String(), berr.String()
 }
 
 // RemoveContainer removes a container.
