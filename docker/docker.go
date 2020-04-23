@@ -3,6 +3,7 @@ package docker
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -73,7 +74,11 @@ func (d *Docker) Check(ctx context.Context, container *pb.Container) (*pb.State,
 	}
 
 	if resp.State.Running {
-		return &pb.State{}, nil
+		cpuTime, maxMem := d.getUsage(ctx, container.Id)
+		return &pb.State{
+			CpuTime: cpuTime,
+			MaxMem:  maxMem,
+		}, nil
 	}
 
 	stdout, stderr := d.getLogs(ctx, container.Id)
@@ -151,6 +156,27 @@ func (d *Docker) runContainer(ctx context.Context, id, image string, command []s
 	}
 
 	return d.client.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{})
+}
+
+func (d *Docker) getUsage(ctx context.Context, id string) (cpuTime uint64, maxMem uint64) {
+	resp, err := d.client.ContainerStats(ctx, id, false)
+	if err != nil {
+		log.WithError(err).WithField("id", id).Warn("Unable to get container stats.")
+		return
+	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	var stats types.Stats
+	if json.NewDecoder(resp.Body).Decode(&stats) != nil {
+		log.WithError(err).Warn("Unable to decode container stats.")
+		return
+	}
+
+	return stats.CPUStats.CPUUsage.TotalUsage, stats.MemoryStats.MaxUsage
 }
 
 func mounts(t *pb.Container) []mount.Mount {

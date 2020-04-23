@@ -24,6 +24,8 @@ message State {
     google.protobuf.Timestamp end = 4;
     string stdout = 5;
     string stderr = 6;
+    uint64 cpu_time = 7;
+    uint64 max_mem = 8;
 }
 
 message Container {

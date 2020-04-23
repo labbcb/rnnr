@@ -84,15 +84,20 @@ type Executor struct {
 	Stderr string `json:"stderr,omitempty"`
 	// Environment variables to set within the container
 	Env map[string]string `json:"env,omitempty"`
+	// Total CPU time in nanoseconds across all cores
+	CPUTime uint64 `json:"cpu_time"`
+	// Maximum memory used ever recorded
+	MaxMem uint64 `json:"max_mem"`
 }
 
 // ExecutorLog represents processing times and logs of an executor
 type ExecutorLog struct {
-	StartTime time.Time `json:"start_time"` // Time the executor started
-	EndTime   time.Time `json:"end_time"`   // Time the executor ended
-	Stdout    string    `json:"stdout"`     // Stdout content
-	Stderr    string    `json:"stderr"`     // Stderr content
-	ExitCode  int32     `json:"exit_code"`  // Exit code
+	StartTime time.Time     `json:"start_time"`        // Time the executor started
+	EndTime   time.Time     `json:"end_time"`          // Time the executor ended
+	Stdout    string        `json:"stdout"`            // Stdout content
+	Stderr    string        `json:"stderr"`            // Stderr content
+	ExitCode  int32         `json:"exit_code"`         // Exit code
+	Elapsed   time.Duration `json:"elapsed,omitempty"` // Elapsed time
 }
 
 // OutputFileLog represents a log file

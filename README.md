@@ -44,10 +44,11 @@ protoc -I pb --go_out=plugins=grpc:pb pb/worker.proto
 Build Docker image and publish to Docker Hub
 
 ```bash
-docker build -t welliton/rnnr:<version> .
-docker push
+docker build -t welliton/rnnr:latest .
+docker push welliton/rnnr:latest
 ```
 
 ## Internals
 
-[Canonical error codes](https://pkg.go.dev/google.golang.org/grpc/codes?tab=doc) are used to differentiate gRPC network communication error from other errors. **Unavailable (14)** always return a `NetworkError`.
+[Canonical error codes](https://pkg.go.dev/google.golang.org/grpc/codes?tab=doc) are used to differentiate gRPC network communication error from other errors.
+**Unavailable (14)** always return a `NetworkError`.

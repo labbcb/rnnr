@@ -83,6 +83,10 @@ func RemoteCheck(task *models.Task, address string) error {
 			task.State = models.ExecutorError
 		}
 		task.Logs.ExecutorLogs = executorLogs(state)
+	} else {
+		// update executor stats
+		task.Executors[0].CPUTime = state.CpuTime
+		task.Executors[0].MaxMem = state.MaxMem
 	}
 	return nil
 }
@@ -142,14 +146,16 @@ func inputs(is []*models.Input) []*pb.Volume {
 	return vs
 }
 
-func executorLogs(m *pb.State) []*models.ExecutorLog {
-	return []*models.ExecutorLog{{
-		StartTime: asTime(m.Start),
-		EndTime:   asTime(m.End),
-		Stdout:    m.Stdout,
-		Stderr:    m.Stderr,
-		ExitCode:  m.ExitCode,
-	}}
+func executorLogs(state *pb.State) []*models.ExecutorLog {
+	logs := &models.ExecutorLog{
+		StartTime: asTime(state.Start),
+		EndTime:   asTime(state.End),
+		Stdout:    state.Stdout,
+		Stderr:    state.Stderr,
+		ExitCode:  state.ExitCode,
+	}
+	logs.Elapsed = logs.EndTime.Sub(logs.StartTime)
+	return []*models.ExecutorLog{logs}
 }
 
 func asTime(p *timestamp.Timestamp) time.Time {
