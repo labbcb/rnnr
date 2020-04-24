@@ -81,6 +81,12 @@ func (m *Master) handleGetNode() http.HandlerFunc {
 			return
 		}
 
+		if err := m.UpdateNodesWorkload([]*models.Node{node}); err != nil {
+			log.WithField("error", err).Error("Unable to update nodes workload.")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		encodeJSON(w, node)
 	}
 }

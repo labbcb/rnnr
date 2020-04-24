@@ -86,7 +86,9 @@ func RemoteCheck(task *models.Task, address string) error {
 	} else {
 		// update executor stats
 		task.Executors[0].CPUTime = state.CpuTime
-		task.Executors[0].MaxMem = state.MaxMem
+		if state.MaxMem > task.Executors[0].MaxMem {
+			task.Executors[0].MaxMem = state.MaxMem
+		}
 	}
 	return nil
 }

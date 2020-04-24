@@ -153,7 +153,7 @@ func (d *Docker) getUsage(ctx context.Context, id string) (cpuTime uint64, maxMe
 		return
 	}
 
-	return stats.CPUStats.CPUUsage.TotalUsage, stats.MemoryStats.MaxUsage
+	return stats.CPUStats.SystemUsage, stats.MemoryStats.Stats["rss"]
 }
 
 func mounts(t *pb.Container) []mount.Mount {
