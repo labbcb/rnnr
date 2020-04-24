@@ -39,6 +39,7 @@ var tasksCmd = &cobra.Command{
 		if format == "json" {
 			err := json.NewEncoder(os.Stdout).Encode(resp.Tasks)
 			fatalOnErr(err)
+			return
 		}
 
 		var line string
