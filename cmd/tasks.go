@@ -52,8 +52,8 @@ var tasksCmd = &cobra.Command{
 				line = fmt.Sprintf("%s | %-8s", line, task.State)
 			}
 
-			if task.RemoteHost != "" {
-				line = fmt.Sprintf("%s | %s at %s (%s)", line, task.Name, task.RemoteHost, task.Elapsed())
+			if task.Worker != nil {
+				line = fmt.Sprintf("%s | %s at %s (%s)", line, task.Name, task.Worker.Host, task.Elapsed())
 			} else {
 				line = fmt.Sprintf("%s | %s", line, task.Name)
 			}

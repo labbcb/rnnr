@@ -8,8 +8,8 @@ type Node struct {
 	Port   string `json:"port"`
 	Active bool   `json:"active"`
 
-	CPUCores int32   `json:"cpuCores"`
-	RAMGb    float64 `json:"ramGb"`
+	CPUCores int32   `json:"cpu_cores"`
+	RAMGb    float64 `json:"ram_gb"`
 
 	// Usage keeps real-time allocated resources in memory. It is not stored in database.
 	Usage *Usage `json:"usage" bson:"-"`
@@ -23,6 +23,6 @@ func (n *Node) Address() string {
 // Usage has the amount of computings resources already in use.
 type Usage struct {
 	Tasks    int     `json:"tasks"`
-	CPUCores int32   `json:"cpuCores"`
-	RAMGb    float64 `json:"ramGb"`
+	CPUCores int32   `json:"cpu_cores"`
+	RAMGb    float64 `json:"ram_gb"`
 }

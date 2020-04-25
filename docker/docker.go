@@ -71,20 +71,17 @@ func (d *Docker) Check(ctx context.Context, container *pb.Container) (*pb.State,
 		return nil, err
 	}
 
+	state := pb.State{}
 	if resp.State.Running {
-		cpuTime, maxMem := d.getUsage(ctx, container.Id)
-		return &pb.State{
-			CpuTime: cpuTime,
-			MaxMem:  maxMem,
-		}, nil
+		state.CpuPercent, state.CpuTime, state.Memory = d.getUsage(ctx, container.Id)
+	} else {
+		state.Exited = true
+		state.ExitCode = int32(resp.State.ExitCode)
+		state.Start = asTimestamp(resp.State.StartedAt)
+		state.End = asTimestamp(resp.State.FinishedAt)
 	}
 
-	return &pb.State{
-		Exited:   true,
-		ExitCode: int32(resp.State.ExitCode),
-		Start:    asTimestamp(resp.State.StartedAt),
-		End:      asTimestamp(resp.State.FinishedAt),
-	}, nil
+	return &state, nil
 }
 
 // RemoveContainer removes a container.
@@ -135,7 +132,7 @@ func (d *Docker) runContainer(ctx context.Context, id, image string, command []s
 	return d.client.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{})
 }
 
-func (d *Docker) getUsage(ctx context.Context, id string) (cpuTime uint64, maxMem uint64) {
+func (d *Docker) getUsage(ctx context.Context, id string) (cpuPercent float64, cpuTime, memory uint64) {
 	resp, err := d.client.ContainerStats(ctx, id, false)
 	if err != nil {
 		log.WithError(err).WithField("id", id).Warn("Unable to get container stats.")
@@ -153,7 +150,11 @@ func (d *Docker) getUsage(ctx context.Context, id string) (cpuTime uint64, maxMe
 		return
 	}
 
-	return stats.CPUStats.SystemUsage, stats.MemoryStats.Stats["rss"]
+	cpuDelta := float64(stats.CPUStats.CPUUsage.TotalUsage - stats.PreCPUStats.CPUUsage.TotalUsage)
+	systemDelta := float64(stats.CPUStats.SystemUsage - stats.PreCPUStats.SystemUsage)
+	cpuPercent = (cpuDelta / systemDelta) * float64(len(stats.CPUStats.CPUUsage.PercpuUsage)) * 100.0
+
+	return cpuPercent, stats.CPUStats.CPUUsage.TotalUsage, stats.MemoryStats.Stats["rss"]
 }
 
 func mounts(t *pb.Container) []mount.Mount {

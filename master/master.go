@@ -68,7 +68,9 @@ func (m *Master) InitializeTasks() error {
 		node, err := m.RequestNode(task.Resources)
 		switch err.(type) {
 		case nil:
-			task.RemoteHost = node.Host
+			task.Worker = &models.Worker{
+				Host: node.Host,
+			}
 			task.State = models.Initializing
 			now := time.Now()
 			task.Logs.StartTime = &now
@@ -76,7 +78,7 @@ func (m *Master) InitializeTasks() error {
 				log.WithError(err).WithFields(log.Fields{"id": task.ID, "name": task.Name}).Error("Unable to update task.")
 				continue
 			}
-			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost}).Info("Task initialized.")
+			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host}).Info("Task initialized.")
 		case *NoActiveNodes:
 			log.Warn("No active nodes")
 		case *NoEnoughResources:
@@ -95,24 +97,24 @@ func (m *Master) RunTasks() error {
 	}
 
 	for _, task := range tasks {
-		node, err := m.DB.GetNode(task.RemoteHost)
+		node, err := m.DB.GetNode(task.Worker.Host)
 		if err != nil {
-			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost}).Error("Unable to get node.")
+			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host}).Error("Unable to get node.")
 			continue
 		}
 
 		switch err := RemoteRun(task, node.Address()).(type) {
 		case nil:
 			task.State = models.Running
-			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost}).Info("Task running.")
+			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host}).Info("Task running.")
 		case *NetworkError:
-			log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.RemoteHost}).Warn("Network error.")
+			log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.Worker.Host}).Warn("Network error.")
 		default:
 			task.State = models.SystemError
 			now := time.Now()
 			task.Logs.EndTime = &now
 			task.Logs.SystemLogs = []string{err.Error()}
-			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost, "state": task.State, "error": err}).Error("Unable to run task.")
+			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host, "state": task.State, "error": err}).Error("Unable to run task.")
 		}
 
 		if err := m.DB.UpdateTask(task); err != nil {
@@ -131,9 +133,9 @@ func (m *Master) CheckTasks() error {
 	}
 
 	for _, task := range tasks {
-		node, err := m.DB.GetNode(task.RemoteHost)
+		node, err := m.DB.GetNode(task.Worker.Host)
 		if err != nil {
-			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost}).Error("Unable to get node.")
+			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host}).Error("Unable to get node.")
 			continue
 		}
 
@@ -142,14 +144,14 @@ func (m *Master) CheckTasks() error {
 			if task.State != models.Running {
 				now := time.Now()
 				task.Logs.EndTime = &now
-				log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost, "state": task.State}).Info("Task finished.")
+				log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host, "state": task.State}).Info("Task finished.")
 			}
 		case *NetworkError:
-			log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.RemoteHost}).Warn("Network error.")
+			log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.Worker.Host}).Warn("Network error.")
 		default:
 			task.State = models.SystemError
 			task.Logs.SystemLogs = append(task.Logs.SystemLogs, err.Error())
-			log.WithError(err).WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.RemoteHost, "state": task.State}).Error("Unable to check task.")
+			log.WithError(err).WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host, "state": task.State}).Error("Unable to check task.")
 		}
 
 		if err := m.DB.UpdateTask(task); err != nil {

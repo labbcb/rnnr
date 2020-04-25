@@ -84,20 +84,15 @@ type Executor struct {
 	Stderr string `json:"stderr,omitempty"`
 	// Environment variables to set within the container
 	Env map[string]string `json:"env,omitempty"`
-	// Total CPU time in nanoseconds across all cores
-	CPUTime uint64 `json:"cpu_time"`
-	// Maximum memory used ever recorded
-	MaxMem uint64 `json:"max_mem"`
 }
 
 // ExecutorLog represents processing times and logs of an executor
 type ExecutorLog struct {
-	StartTime time.Time     `json:"start_time"`        // Time the executor started
-	EndTime   time.Time     `json:"end_time"`          // Time the executor ended
-	Stdout    string        `json:"stdout"`            // Stdout content
-	Stderr    string        `json:"stderr"`            // Stderr content
-	ExitCode  int32         `json:"exit_code"`         // Exit code
-	Elapsed   time.Duration `json:"elapsed,omitempty"` // Elapsed time
+	StartTime time.Time `json:"start_time"` // Time the executor started
+	EndTime   time.Time `json:"end_time"`   // Time the executor ended
+	Stdout    string    `json:"stdout"`     // Stdout content
+	Stderr    string    `json:"stderr"`     // Stderr content
+	ExitCode  int32     `json:"exit_code"`  // Exit code
 }
 
 // OutputFileLog represents a log file
@@ -123,6 +118,22 @@ type Log struct {
 	SystemLogs []string `json:"system_logs,omitempty"`
 }
 
+// Worker represents a active computing node.
+type Worker struct {
+	// Hostname of computing node.
+	Host string `json:"host,omitempty"`
+	// Total CPU time in nanoseconds across all cores
+	CPUTime uint64 `json:"cpu_time"`
+	// Current CPU percentage.
+	CPUPercentage float64 `json:"cpu_percentage"`
+	// Maximum CPU percentage.
+	MaxCPUPercentage float64 `json:"max_cpu_percentage"`
+	// Current memory used in bytes.
+	Memory uint64 `json:"memory"`
+	// Maximum memory used ever recorded in bytes.
+	MaxMemory uint64 `json:"max_memory"`
+}
+
 // Task is a collection of command to be executed to process data
 type Task struct {
 	ID           string            `json:"id" bson:"_id"`
@@ -138,8 +149,8 @@ type Task struct {
 	Logs         *Log              `json:"logs,omitempty"`
 	CreationTime *time.Time        `json:"creation_time,omitempty"`
 
-	// These fields extend TES API allowing client to know which node is processing the task.
-	RemoteHost string `json:"remote_host,omitempty"`
+	// RNNR specific fields.
+	Worker *Worker `json:"worker,omitempty"`
 }
 
 // ListTasksResponse represents a list of tasks previous submitted to system
@@ -185,8 +196,8 @@ func (t *Task) Failed() bool {
 
 func (t *Task) String() string {
 	var host string
-	if t.RemoteHost != "" {
-		host = " at " + t.RemoteHost
+	if t.Worker != nil {
+		host = " at " + t.Worker.Host
 	}
 	return fmt.Sprintf("task %s CPU=%d RAM=%.2f %s%s", t.ID, t.Resources.CPUCores, t.Resources.RAMGb, t.State, host)
 }

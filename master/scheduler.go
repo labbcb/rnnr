@@ -67,12 +67,12 @@ func (m *Master) DisableNode(host string, cancel bool) error {
 		}
 
 		for _, task := range tasks {
-			if task.RemoteHost != node.Host {
+			if task.Worker.Host != node.Host {
 				continue
 			}
 
 			if err := RemoteCancel(task, node); err != nil {
-				log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.RemoteHost}).Warn("Unable to remotely cancel task.")
+				log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.Worker.Host}).Warn("Unable to remotely cancel task.")
 			}
 
 			go m.enqueueTask(task)
@@ -144,13 +144,13 @@ func (m *Master) UpdateNodesWorkload(nodes []*models.Node) error {
 	}
 
 	for _, task := range tasks {
-		_, ok := usage[task.RemoteHost]
+		_, ok := usage[task.Worker.Host]
 		if !ok {
-			usage[task.RemoteHost] = &models.Usage{}
+			usage[task.Worker.Host] = &models.Usage{}
 		}
-		usage[task.RemoteHost].Tasks++
-		usage[task.RemoteHost].CPUCores += task.Resources.CPUCores
-		usage[task.RemoteHost].RAMGb += task.Resources.RAMGb
+		usage[task.Worker.Host].Tasks++
+		usage[task.Worker.Host].CPUCores += task.Resources.CPUCores
+		usage[task.Worker.Host].RAMGb += task.Resources.RAMGb
 	}
 
 	for _, n := range nodes {
@@ -167,7 +167,7 @@ func (m *Master) UpdateNodesWorkload(nodes []*models.Node) error {
 func (m *Master) enqueueTask(task *models.Task) {
 	task.State = models.Queued
 	task.Logs = &models.Log{}
-	task.RemoteHost = ""
+	task.Worker.Host = ""
 	if err := m.DB.UpdateTask(task); err != nil {
 		log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "error": err}).Error("Unable to update task.")
 		return
