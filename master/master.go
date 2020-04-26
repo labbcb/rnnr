@@ -35,12 +35,12 @@ func New(database string, sleepTime time.Duration) (*Master, error) {
 		},
 	}
 	master.register()
-	go master.StartMonitor(sleepTime)
+	go master.StartTaskManager(sleepTime)
 	return master, nil
 }
 
-// StartMonitor starts background tasks in loop.
-func (m *Master) StartMonitor(sleepTime time.Duration) {
+// StartTaskManager starts task management.
+func (m *Master) StartTaskManager(sleepTime time.Duration) {
 	for {
 		if err := m.InitializeTasks(); err != nil {
 			log.WithError(err).Warn("Unable to initialize tasks.")
@@ -57,7 +57,9 @@ func (m *Master) StartMonitor(sleepTime time.Duration) {
 	}
 }
 
-// InitializeTasks selects a worker node to execute queued tasks.
+// InitializeTasks iterates over all Queued tasks requesting a computing node for each task.
+// The selected node is assigned to perform the task. The task changes to the Initializing state.
+// If no active node has enough computing resources to perform the task the same is kept in queue.
 func (m *Master) InitializeTasks() error {
 	tasks, err := m.DB.FindByState(0, 0, models.Full, models.Queued)
 	if err != nil {

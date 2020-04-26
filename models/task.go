@@ -137,17 +137,17 @@ type Worker struct {
 // Task is a collection of command to be executed to process data
 type Task struct {
 	ID           string            `json:"id" bson:"_id"`
-	State        State             `json:"state"`
 	Name         string            `json:"name,omitempty"`
 	Description  string            `json:"description,omitempty"`
-	Inputs       []*Input          `json:"inputs,omitempty"`
-	Outputs      []*Output         `json:"outputs,omitempty"`
+	CreationTime *time.Time        `json:"creation_time,omitempty"`
+	State        State             `json:"state"`
 	Resources    *Resources        `json:"resources,omitempty"`
 	Executors    []Executor        `json:"executors,omitempty"`
+	Inputs       []*Input          `json:"inputs,omitempty"`
+	Outputs      []*Output         `json:"outputs,omitempty"`
 	Volumes      []string          `json:"volumes,omitempty"`
 	Tags         map[string]string `json:"tags,omitempty"`
 	Logs         *Log              `json:"logs,omitempty"`
-	CreationTime *time.Time        `json:"creation_time,omitempty"`
 
 	// RNNR specific fields.
 	Worker *Worker `json:"worker,omitempty"`
