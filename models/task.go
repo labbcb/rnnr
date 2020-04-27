@@ -122,16 +122,12 @@ type Log struct {
 type Worker struct {
 	// Hostname of computing node.
 	Host string `json:"host,omitempty"`
-	// Total CPU time in nanoseconds across all cores
+	// Total CPU time in nanoseconds across all cores.
 	CPUTime uint64 `json:"cpu_time"`
-	// Current CPU percentage.
+	// Maximum CPU percentage ever recorded.
 	CPUPercentage float64 `json:"cpu_percentage"`
-	// Maximum CPU percentage.
-	MaxCPUPercentage float64 `json:"max_cpu_percentage"`
-	// Current memory used in bytes.
-	Memory uint64 `json:"memory"`
 	// Maximum memory used ever recorded in bytes.
-	MaxMemory uint64 `json:"max_memory"`
+	Memory uint64 `json:"memory"`
 }
 
 // Task is a collection of command to be executed to process data
