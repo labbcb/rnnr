@@ -195,7 +195,7 @@ func (m *Master) handleGetServiceInfo() http.HandlerFunc {
 func encodeJSON(w http.ResponseWriter, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(v); err != nil {
-		log.WithField("error", err).Error("Unable to encode JSON.")
+		log.WithFields(log.Fields{"error": err, "object": v}).Error("Unable to encode JSON.")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
