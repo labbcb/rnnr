@@ -105,25 +105,36 @@ func (m *Master) RunTasks() error {
 			continue
 		}
 
-		switch err := RemoteRun(task, node.Address()).(type) {
-		case nil:
-			task.State = models.Running
-			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host}).Info("Task running.")
-		case *NetworkError:
-			log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.Worker.Host}).Warn("Network error.")
-		default:
-			task.State = models.SystemError
-			now := time.Now()
-			task.Logs.EndTime = &now
-			task.Logs.SystemLogs = []string{err.Error()}
-			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host, "state": task.State, "error": err}).Error("Unable to run task.")
+		task.State = models.Running
+		if err := m.DB.UpdateTask(task); err != nil {
+			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "error": err}).Error("Unable to update task.")
+			continue
 		}
+
+		go m.RunTask(task, node)
+	}
+	return nil
+}
+
+// RunTask remotely starts a task.
+func (m *Master) RunTask(task *models.Task, node *models.Node) {
+	switch err := RemoteRun(task, node.Address()).(type) {
+	case nil:
+		log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host}).Info("Task running.")
+	case *NetworkError:
+		log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.Worker.Host}).Warn("Network error.")
+		m.enqueueTask(task)
+	default:
+		task.State = models.SystemError
+		now := time.Now()
+		task.Logs.EndTime = &now
+		task.Logs.SystemLogs = []string{err.Error()}
+		log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host, "state": task.State, "error": err}).Error("Unable to run task.")
 
 		if err := m.DB.UpdateTask(task); err != nil {
 			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "error": err}).Error("Unable to update task.")
 		}
 	}
-	return nil
 }
 
 // CheckTasks will iterate over running tasks checking if they have been completed well or not.
