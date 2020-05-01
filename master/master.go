@@ -2,6 +2,7 @@ package master
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -98,6 +99,9 @@ func (m *Master) RunTasks() error {
 		return err
 	}
 
+	ch := make(chan *models.Task)
+	wg := &sync.WaitGroup{}
+	wg.Add(len(tasks))
 	for _, task := range tasks {
 		node, err := m.DB.GetNode(task.Worker.Host)
 		if err != nil {
@@ -105,36 +109,42 @@ func (m *Master) RunTasks() error {
 			continue
 		}
 
-		task.State = models.Running
-		if err := m.DB.UpdateTask(task); err != nil {
-			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "error": err}).Error("Unable to update task.")
-			continue
-		}
-
-		go m.RunTask(task, node)
+		go m.RunTask(task, node, ch, wg)
 	}
+
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+
+	for task := range ch {
+		if err := m.DB.UpdateTask(task); err != nil {
+			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "error": err}).Warn("Unable to update task.")
+		}
+	}
+
 	return nil
 }
 
 // RunTask remotely starts a task.
-func (m *Master) RunTask(task *models.Task, node *models.Node) {
+func (m *Master) RunTask(task *models.Task, node *models.Node, res chan<- *models.Task, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	switch err := RemoteRun(task, node.Address()).(type) {
 	case nil:
+		task.State = models.Running
 		log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host}).Info("Task running.")
 	case *NetworkError:
 		log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.Worker.Host}).Warn("Network error.")
-		m.enqueueTask(task)
 	default:
 		task.State = models.SystemError
 		now := time.Now()
 		task.Logs.EndTime = &now
 		task.Logs.SystemLogs = []string{err.Error()}
 		log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host, "state": task.State, "error": err}).Error("Unable to run task.")
-
-		if err := m.DB.UpdateTask(task); err != nil {
-			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "error": err}).Error("Unable to update task.")
-		}
 	}
+
+	res <- task
 }
 
 // CheckTasks will iterate over running tasks checking if they have been completed well or not.
@@ -145,6 +155,9 @@ func (m *Master) CheckTasks() error {
 		return err
 	}
 
+	ch := make(chan *models.Task)
+	wg := &sync.WaitGroup{}
+	wg.Add(len(tasks))
 	for _, task := range tasks {
 		node, err := m.DB.GetNode(task.Worker.Host)
 		if err != nil {
@@ -152,24 +165,41 @@ func (m *Master) CheckTasks() error {
 			continue
 		}
 
-		switch err := RemoteCheck(task, node.Address()).(type) {
-		case nil:
-			if task.State != models.Running {
-				now := time.Now()
-				task.Logs.EndTime = &now
-				log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host, "state": task.State}).Info("Task finished.")
-			}
-		case *NetworkError:
-			log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.Worker.Host}).Warn("Network error.")
-		default:
-			task.State = models.SystemError
-			task.Logs.SystemLogs = append(task.Logs.SystemLogs, err.Error())
-			log.WithError(err).WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host, "state": task.State}).Error("Unable to check task.")
-		}
+		go CheckTask(task, node, ch, wg)
+	}
 
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+
+	for task := range ch {
 		if err := m.DB.UpdateTask(task); err != nil {
 			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "error": err}).Error("Unable to update task.")
 		}
 	}
+
 	return nil
+}
+
+// CheckTask remotely check a running task.
+func CheckTask(task *models.Task, node *models.Node, res chan<- *models.Task, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	switch err := RemoteCheck(task, node.Address()).(type) {
+	case nil:
+		if task.State != models.Running {
+			now := time.Now()
+			task.Logs.EndTime = &now
+			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host, "state": task.State}).Info("Task finished.")
+		}
+	case *NetworkError:
+		log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.Worker.Host}).Warn("Network error.")
+	default:
+		task.State = models.SystemError
+		task.Logs.SystemLogs = append(task.Logs.SystemLogs, err.Error())
+		log.WithError(err).WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host, "state": task.State}).Error("Unable to check task.")
+	}
+
+	res <- task
 }
