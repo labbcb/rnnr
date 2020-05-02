@@ -25,6 +25,7 @@ import (
 // Docker struct wraps Docker client
 type Docker struct {
 	client *client.Client
+	Temp   string
 }
 
 // Connect creates a Docker client using environment variables
@@ -33,7 +34,7 @@ func Connect() (*Docker, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Docker{c}, nil
+	return &Docker{c, ""}, nil
 }
 
 // Run runs a container
@@ -47,13 +48,16 @@ func (d *Docker) Run(ctx context.Context, container *pb.Container) error {
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
 
-	return d.runContainer(
-		ctx,
-		container.Id,
-		container.Image,
-		container.Command,
-		container.WorkDir,
-		env, mounts(container))
+	volumes := mounts(container)
+	if d.Temp != "" {
+		volumes = append(volumes, mount.Mount{
+			Type:   mount.TypeBind,
+			Source: filepath.Join(d.Temp, container.Id),
+			Target: "/tmp",
+		})
+	}
+
+	return d.runContainer(ctx, container.Id, container.Image, container.Command, container.WorkDir, env, volumes)
 }
 
 // Stop stops a container

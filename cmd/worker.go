@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-var port string
+var port, temp string
 
 var workerCmd = &cobra.Command{
 	Use:     "worker",
@@ -21,7 +21,7 @@ var workerCmd = &cobra.Command{
 			FullTimestamp: true,
 		})
 
-		w, err := worker.New(cpuCores, ramGb)
+		w, err := worker.New(cpuCores, ramGb, temp)
 		fatalOnErr(err)
 
 		lis, err := net.Listen("tcp", ":"+port)
@@ -35,5 +35,6 @@ var workerCmd = &cobra.Command{
 
 func init() {
 	workerCmd.Flags().StringVarP(&port, "port", "p", "50051", "TCP port to bind server")
+	workerCmd.Flags().StringVarP(&temp, "tmp", "t", "", "Directory to mount containers /tmp.")
 	rootCmd.AddCommand(workerCmd)
 }
