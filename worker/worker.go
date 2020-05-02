@@ -21,7 +21,7 @@ type Worker struct {
 }
 
 // New creates a Worker.
-func New(cpuCores int32, ramGb float64, temp string) (*Worker, error) {
+func New(cpuCores int32, ramGb float64) (*Worker, error) {
 	conn, err := docker.Connect()
 	if err != nil {
 		return nil, err
@@ -41,8 +41,6 @@ func New(cpuCores int32, ramGb float64, temp string) (*Worker, error) {
 			RamGb:    ramGb,
 		},
 	}
-
-	worker.Docker.Temp = temp
 
 	return worker, nil
 }

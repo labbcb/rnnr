@@ -7,7 +7,6 @@ import (
 	"io"
 	"io/ioutil"
 	"math"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -26,7 +25,6 @@ import (
 // Docker struct wraps Docker client
 type Docker struct {
 	client *client.Client
-	Temp   string
 }
 
 // Connect creates a Docker client using environment variables
@@ -35,7 +33,7 @@ func Connect() (*Docker, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Docker{c, ""}, nil
+	return &Docker{c}, nil
 }
 
 // Run runs a container
@@ -50,19 +48,9 @@ func (d *Docker) Run(ctx context.Context, container *pb.Container) error {
 	}
 
 	volumes := mounts(container)
-	if d.Temp != "" {
-		tempDir := filepath.Join(d.Temp, container.Id)
-		if err := os.Mkdir(tempDir, 0755); err != nil {
-			return err
-		}
-		volumes = append(volumes, mount.Mount{
-			Type:   mount.TypeBind,
-			Source: tempDir,
-			Target: "/tmp",
-		})
-	}
 
-	return d.runContainer(ctx, container.Id, container.Image, container.Command, container.WorkDir, env, volumes)
+	return d.runContainer(ctx, container.Id, container.Image, container.Command, container.WorkDir,
+		env, volumes)
 }
 
 // Stop stops a container
@@ -173,19 +161,19 @@ func (d *Docker) getUsage(ctx context.Context, id string) (cpuPercent float64, c
 func mounts(t *pb.Container) []mount.Mount {
 	var volumes []mount.Mount
 
-	for _, input := range t.Outputs {
+	for _, output := range t.Outputs {
 		volumes = addVolume(volumes, mount.Mount{
 			Type:   mount.TypeBind,
-			Source: filepath.Dir(input.HostPath),
-			Target: filepath.Dir(input.ContainerPath),
+			Source: strings.TrimSuffix(filepath.Dir(output.HostPath), "/execution"),
+			Target: strings.TrimSuffix(filepath.Dir(output.ContainerPath), "/execution"),
 		})
 	}
 
 	for _, input := range t.Inputs {
 		volumes = addVolume(volumes, mount.Mount{
 			Type:     mount.TypeBind,
-			Source:   filepath.Dir(input.HostPath),
-			Target:   filepath.Dir(input.ContainerPath),
+			Source:   strings.TrimSuffix(filepath.Dir(input.HostPath), "/execution"),
+			Target:   strings.TrimSuffix(filepath.Dir(input.ContainerPath), "/execution"),
 			ReadOnly: true,
 		})
 	}
