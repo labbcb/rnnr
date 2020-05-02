@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -50,9 +51,13 @@ func (d *Docker) Run(ctx context.Context, container *pb.Container) error {
 
 	volumes := mounts(container)
 	if d.Temp != "" {
+		tempDir := filepath.Join(d.Temp, container.Id)
+		if err := os.Mkdir(tempDir, 0755); err != nil {
+			return err
+		}
 		volumes = append(volumes, mount.Mount{
 			Type:   mount.TypeBind,
-			Source: filepath.Join(d.Temp, container.Id),
+			Source: tempDir,
 			Target: "/tmp",
 		})
 	}
