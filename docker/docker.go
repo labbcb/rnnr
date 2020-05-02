@@ -48,6 +48,10 @@ func (d *Docker) Run(ctx context.Context, container *pb.Container) error {
 	}
 
 	volumes := mounts(container)
+	for _, volume := range volumes {
+		volume.Source = strings.TrimSuffix(volume.Source, "/execution")
+		volume.Target = strings.TrimSuffix(volume.Target, "/execution")
+	}
 
 	return d.runContainer(ctx, container.Id, container.Image, container.Command, container.WorkDir,
 		env, volumes)
@@ -164,16 +168,16 @@ func mounts(t *pb.Container) []mount.Mount {
 	for _, output := range t.Outputs {
 		volumes = addVolume(volumes, mount.Mount{
 			Type:   mount.TypeBind,
-			Source: strings.TrimSuffix(filepath.Dir(output.HostPath), "/execution"),
-			Target: strings.TrimSuffix(filepath.Dir(output.ContainerPath), "/execution"),
+			Source: filepath.Dir(output.HostPath),
+			Target: filepath.Dir(output.ContainerPath),
 		})
 	}
 
 	for _, input := range t.Inputs {
 		volumes = addVolume(volumes, mount.Mount{
 			Type:     mount.TypeBind,
-			Source:   strings.TrimSuffix(filepath.Dir(input.HostPath), "/execution"),
-			Target:   strings.TrimSuffix(filepath.Dir(input.ContainerPath), "/execution"),
+			Source:   filepath.Dir(input.HostPath),
+			Target:   filepath.Dir(input.ContainerPath),
 			ReadOnly: true,
 		})
 	}
@@ -186,9 +190,6 @@ func addVolume(volumes []mount.Mount, v mount.Mount) []mount.Mount {
 	for i := range volumes {
 		if volumes[i].Target == v.Target {
 			return volumes
-		}
-		if volumes[i].ReadOnly && v.ReadOnly {
-			continue
 		}
 		if strings.HasPrefix(volumes[i].Target, v.Target) {
 			volumes[i] = v
