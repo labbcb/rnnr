@@ -187,6 +187,9 @@ func addVolume(volumes []mount.Mount, v mount.Mount) []mount.Mount {
 		if volumes[i].Target == v.Target {
 			return volumes
 		}
+		if volumes[i].ReadOnly && v.ReadOnly {
+			continue
+		}
 		if strings.HasPrefix(volumes[i].Target, v.Target) {
 			volumes[i] = v
 			return volumes
