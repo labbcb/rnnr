@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/labbcb/rnnr/client"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -10,17 +9,15 @@ import (
 var stdout, stderr bool
 
 var logsCmd = &cobra.Command{
-	Use:   "logs",
-	Short: "Task logs",
-	Long: `Task provides many logs. By default it prints Task.Log.SystemLogs.
-	Use --stdout and --stderr to get executor logs.`,
+	Use:   "logs id",
+	Short: "Get task logs",
+	Long: "Task provides many logs. By default it prints system logs.\n" +
+		"Use --stdout and --stderr to get executor logs.",
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		host := viper.GetString("host")
 		t, err := client.GetTask(host, args[0])
-		if err != nil {
-			log.Fatalf("Unable to list tasks: %v", err)
-		}
+		exitOnErr(err)
 
 		if t.Active() {
 			return
@@ -39,7 +36,7 @@ var logsCmd = &cobra.Command{
 }
 
 func init() {
-	logsCmd.Flags().BoolVar(&stdout, "stdout", false, "Prints Task.Executor standard out")
-	logsCmd.Flags().BoolVar(&stderr, "stderr", false, "Prints Task.Executor standard error")
+	logsCmd.Flags().BoolVar(&stdout, "stdout", false, "Prints executor standard out")
+	logsCmd.Flags().BoolVar(&stderr, "stderr", false, "Prints executor standard error")
 	rootCmd.AddCommand(logsCmd)
 }

@@ -30,7 +30,7 @@ task Hello {
   }
 
   output {
-    File msg = "out.txt"
+    String msg = read_string("out.txt")
   }
 
   runtime {

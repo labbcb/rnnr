@@ -15,14 +15,18 @@ var sleepTime int
 var masterCmd = &cobra.Command{
 	Use:     "master",
 	Aliases: []string{"server"},
-	Short:   "StartMonitor RNNR master server",
+	Short:   "Start master server",
+	Long: "Start the RNNR master server instance.\n" +
+		"It will listen port 8080. Use --address to change the port suffixed with colon.\n" +
+		"It will connect with MongoDB. use --database to change URL.\n" +
+		"By default monitoring system will iterate over tasks and sleep. Use --time to change sleep time.",
 	Run: func(cmd *cobra.Command, args []string) {
 		log.SetFormatter(&log.TextFormatter{
 			FullTimestamp: true,
 		})
 
 		m, err := master.New(database, time.Duration(sleepTime)*time.Second)
-		fatalOnErr(err)
+		exitOnErr(err)
 
 		log.Fatal(http.ListenAndServe(address, m.Router))
 	},

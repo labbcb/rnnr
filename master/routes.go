@@ -27,7 +27,14 @@ func (m *Master) register() {
 
 func (m *Master) handleListNodes() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		nodes, err := m.GetAllNodes()
+		v := r.URL.Query()
+		active, _ := strconv.ParseBool(v.Get("active"))
+		var activeP *bool
+		if active {
+			activeP = &active
+		}
+
+		nodes, err := m.ListNodes(activeP)
 		if err != nil {
 			log.WithField("error", err).Error("Unable to get all nodes.")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -162,7 +169,12 @@ func (m *Master) handleListTasks() http.HandlerFunc {
 			states = append(states, models.State(state))
 		}
 
-		tasks, err := m.ListTasks(namePrefix, pageSize, pageToken, view, states)
+		var nodes []string
+		for _, state := range v["node"] {
+			nodes = append(nodes, state)
+		}
+
+		tasks, err := m.ListTasks(namePrefix, pageSize, pageToken, view, nodes, states)
 		if err != nil {
 			log.WithFields(log.Fields{"pageSize": pageSize, "pageToken": pageToken, "view": view, "error": err}).Fatal("Unable to get all tasks.")
 			http.Error(w, err.Error(), http.StatusInternalServerError)

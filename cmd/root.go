@@ -1,3 +1,4 @@
+// Package cmd implements command line commands.
 package cmd
 
 import (
@@ -5,7 +6,6 @@ import (
 	"os"
 
 	"github.com/mitchellh/go-homedir"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
 	"github.com/spf13/cobra"
@@ -16,9 +16,12 @@ var cfgFile string
 var rootCmd = &cobra.Command{
 	Use:   "rnnr",
 	Short: "Distributed task executor for genomics research",
+	Long: "RNNR is designed to distribute processing tasks across computing nodes.\n" +
+		"It implements Task Execution Service API to communicate with workflow managers.\n" +
+		"Full documentation at https://bcblab.org/rnnr",
 }
 
-// Execute calls root command
+// Execute calls root command.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -31,9 +34,9 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default $HOME/.rnnr.yaml)")
 	rootCmd.PersistentFlags().String("host", "http://localhost:8080", "RNNR server URL")
-	rootCmd.PersistentFlags().StringP("format", "f", "console", "Output format. JSON or console (default).")
-	fatalOnErr(viper.BindPFlag("host", rootCmd.PersistentFlags().Lookup("host")))
-	fatalOnErr(viper.BindPFlag("format", rootCmd.PersistentFlags().Lookup("format")))
+	rootCmd.PersistentFlags().StringP("format", "f", "console", "Output format. JSON or console")
+	exitOnErr(viper.BindPFlag("host", rootCmd.PersistentFlags().Lookup("host")))
+	exitOnErr(viper.BindPFlag("format", rootCmd.PersistentFlags().Lookup("format")))
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -62,8 +65,17 @@ func initConfig() {
 	}
 }
 
-func fatalOnErr(err error) {
+func message(format string, a ...interface{}) {
+	_, _ = fmt.Fprintf(os.Stderr, format, a)
+}
+
+func messageAndExit(format string, a ...interface{}) {
+	message(format, a)
+	os.Exit(1)
+}
+
+func exitOnErr(err error) {
 	if err != nil {
-		log.Fatal(err)
+		messageAndExit("%v\n", err)
 	}
 }

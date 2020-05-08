@@ -19,10 +19,12 @@ require (
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/pbnjay/memory v0.0.0-20190104145345-974d429e7ae4
 	github.com/sirupsen/logrus v1.5.0
-	github.com/spf13/cobra v0.0.7
+	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.6.3
 	go.mongodb.org/mongo-driver v1.3.2
+	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550 // indirect
 	golang.org/x/net v0.0.0-20200421231249-e086a090c8fd // indirect
+	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
 	golang.org/x/sys v0.0.0-20200420163511-1957bb5e6d1f // indirect
 	google.golang.org/genproto v0.0.0-20200424135956-bca184e23272 // indirect
 	google.golang.org/grpc v1.29.1

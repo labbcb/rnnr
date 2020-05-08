@@ -1,3 +1,4 @@
+// Package client implements Task Execution Service API for requesting servers.
 package client
 
 import (
@@ -7,14 +8,23 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/labbcb/rnnr/models"
 )
 
 const contentType = "application/json"
 
-// ListTasks retrieves all tasks from server.
-func ListTasks(host string, pageSize int, pageToken string, view models.View, states []models.State) (*models.ListTasksResponse, error) {
+// ListTasks retrieves tasks from server that matches worker nodes and task states.
+// Pagination is done via pageSize and pageToken parameters.
+// view defines task fields to be returned.
+//
+// Minimal returns only task ID and state.
+//
+// Basic returns all fields except Logs.ExecutorLogs.Stdout, Logs.ExecutorLogs.Stderr, Inputs.Content and Logs.SystemLogs.
+//
+// Full returns all fields.
+func ListTasks(host string, pageSize int, pageToken string, view models.View, nodes []string, states []models.State) (*models.ListTasksResponse, error) {
 	u, err := url.Parse(host + "/tasks")
 	if err != nil {
 		return nil, err
@@ -26,6 +36,9 @@ func ListTasks(host string, pageSize int, pageToken string, view models.View, st
 	v.Set("view", string(view))
 	for _, state := range states {
 		v.Add("state", string(state))
+	}
+	for _, node := range nodes {
+		v.Add("node", string(node))
 	}
 	u.RawQuery = v.Encode()
 
@@ -92,7 +105,7 @@ func CancelTask(host, id string) error {
 	return nil
 }
 
-// EnableNode subscribes or enables worker node.
+// EnableNode enables worker node at master server returning its ID.
 func EnableNode(host string, n *models.Node) (id string, err error) {
 	var b bytes.Buffer
 	if err := json.NewEncoder(&b).Encode(n); err != nil {
@@ -122,7 +135,7 @@ func EnableNode(host string, n *models.Node) (id string, err error) {
 }
 
 // DisableNode disables worker node.
-// Cancel tells server to cancel running tasks in node and enqueue those tasks.
+// cancel tells server to cancel running tasks in the worker node and enqueue those tasks.
 func DisableNode(host, id string, cancel bool) error {
 	var b bytes.Buffer
 	if err := json.NewEncoder(&b).Encode(cancel); err != nil {
@@ -146,8 +159,17 @@ func DisableNode(host, id string, cancel bool) error {
 }
 
 // ListNodes retrieves all worker nodes.
-func ListNodes(host string) ([]*models.Node, error) {
-	resp, err := http.Get(host + "/nodes")
+func ListNodes(host string, onlyActive bool) ([]*models.Node, error) {
+	u, err := url.Parse(host + "/nodes")
+	if err != nil {
+		return nil, err
+	}
+
+	v := url.Values{}
+	v.Set("active", strconv.FormatBool(onlyActive))
+	u.RawQuery = v.Encode()
+
+	resp, err := http.Get(u.String())
 	if err != nil {
 		return nil, err
 	}
@@ -156,11 +178,11 @@ func ListNodes(host string) ([]*models.Node, error) {
 			log.Fatal(err)
 		}
 	}()
-	// check status code
+
 	if resp.StatusCode != http.StatusOK {
 		return nil, raiseHTTPError(resp)
 	}
-	// decode response body
+
 	var ns []*models.Node
 	if err := json.NewDecoder(resp.Body).Decode(&ns); err != nil {
 		return nil, err

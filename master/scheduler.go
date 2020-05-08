@@ -2,7 +2,6 @@ package master
 
 import (
 	"fmt"
-
 	"github.com/labbcb/rnnr/models"
 	log "github.com/sirupsen/logrus"
 )
@@ -34,7 +33,7 @@ func (m *Master) EnableNode(node *models.Node) error {
 
 	node.Active = true
 	node.Usage = &models.Usage{}
-	if err := m.DB.AddNodes(node); err != nil {
+	if err := m.DB.AddNode(node); err != nil {
 		return err
 	}
 
@@ -60,17 +59,13 @@ func (m *Master) DisableNode(host string, cancel bool) error {
 	}
 
 	go func() {
-		tasks, err := m.DB.FindByState(0, 0, models.Full, models.Initializing, models.Running, models.Paused)
+		tasks, err := m.DB.ListTasks(0, 0, models.Full, []string{host}, []models.State{models.Initializing, models.Running, models.Paused})
 		if err != nil {
 			log.WithError(err).Warn("Unable to get tasks to cancel.")
 			return
 		}
 
 		for _, task := range tasks {
-			if task.Worker.Host != node.Host {
-				continue
-			}
-
 			if err := RemoteCancel(task, node); err != nil {
 				log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.Worker.Host}).Warn("Unable to remotely cancel task.")
 			}
@@ -82,13 +77,10 @@ func (m *Master) DisableNode(host string, cancel bool) error {
 	return nil
 }
 
-// GetAllNodes returns all computing node (deactivated included).
-func (m *Master) GetAllNodes() ([]*models.Node, error) {
-	ns, err := m.DB.AllNodes()
-	if err != nil {
-		return nil, fmt.Errorf("unable to get all nodes: %w", err)
-	}
-	return ns, nil
+// ListNodes returns worker nodes (disabled included).
+// Set active to return active (enabled) or disable nodes.
+func (m *Master) ListNodes(active *bool) ([]*models.Node, error) {
+	return m.DB.ListNodes(active)
 }
 
 // RequestNode selects a node that have enough computing resource to execute task.
@@ -97,7 +89,8 @@ func (m *Master) GetAllNodes() ([]*models.Node, error) {
 // Once found a node it will update in database.
 func (m *Master) RequestNode(resources *models.Resources) (*models.Node, error) {
 	// GetTask active computing nodes.
-	nodes, err := m.DB.GetActiveNodes()
+	active := true
+	nodes, err := m.DB.ListNodes(&active)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +131,7 @@ func (m *Master) RequestNode(resources *models.Resources) (*models.Node, error) 
 // UpdateNodesWorkload gets active tasks (Initializing or Running) and update node usage.
 func (m *Master) UpdateNodesWorkload(nodes []*models.Node) error {
 	usage := make(map[string]*models.Usage)
-	tasks, err := m.DB.FindByState(0, 0, models.Full, models.Initializing, models.Running)
+	tasks, err := m.DB.ListTasks(0, 0, models.Full, nil, []models.State{models.Initializing, models.Running})
 	if err != nil {
 		return err
 	}

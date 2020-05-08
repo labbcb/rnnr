@@ -1,3 +1,4 @@
+// Package master implements RNNR master logic to manage tasks and worker nodes.
 package master
 
 import (
@@ -6,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/labbcb/rnnr/db"
 	"github.com/labbcb/rnnr/models"
 	log "github.com/sirupsen/logrus"
 )
@@ -14,14 +14,15 @@ import (
 // Master is a master instance.
 type Master struct {
 	Router      *mux.Router
-	DB          *db.DB
+	DB          *DB
 	ServiceInfo *models.ServiceInfo
 }
 
-// New creates a server and initializes TES API and Node management endpoints.
-// database is URI to MongoDB (without database name, which is 'rnnr-master')
+// New creates a server and initializes Task and Node endpoints.
+// database is URI to MongoDB (without database name, which is rnnr).
+// sleepTimes defines the time in seconds that master will sleep after task management iteration.
 func New(database string, sleepTime time.Duration) (*Master, error) {
-	connection, err := db.Connect(database, "rnnr")
+	connection, err := Connect(database, "rnnr")
 	if err != nil {
 		return nil, fmt.Errorf("connecting to MongoDB: %w", err)
 	}
@@ -31,7 +32,7 @@ func New(database string, sleepTime time.Duration) (*Master, error) {
 		DB:     connection,
 		ServiceInfo: &models.ServiceInfo{
 			Name:    "rnnr",
-			Doc:     "Distributed Task Executor for Genomics Research. GA4GH TES API implementation.",
+			Doc:     "Distributed Task Executor for Genomics Research (https://bcblab.org/rnnr).",
 			Storage: []string{"NFS"},
 		},
 	}
@@ -41,6 +42,8 @@ func New(database string, sleepTime time.Duration) (*Master, error) {
 }
 
 // StartTaskManager starts task management.
+// It will iterate over: 1) queued tasks; 2) initialized tasks; and 3) running tasks.
+// Then it will sleepTime seconds and start over.
 func (m *Master) StartTaskManager(sleepTime time.Duration) {
 	for {
 		if err := m.InitializeTasks(); err != nil {
@@ -62,7 +65,7 @@ func (m *Master) StartTaskManager(sleepTime time.Duration) {
 // The selected node is assigned to perform the task. The task changes to the Initializing state.
 // If no active node has enough computing resources to perform the task the same is kept in queue.
 func (m *Master) InitializeTasks() error {
-	tasks, err := m.DB.FindByState(0, 0, models.Full, models.Queued)
+	tasks, err := m.DB.ListTasks(0, 0, models.Full, nil, []models.State{models.Queued})
 	if err != nil {
 		return err
 	}
@@ -94,7 +97,7 @@ func (m *Master) InitializeTasks() error {
 
 // RunTasks tries to start initialized tasks.
 func (m *Master) RunTasks() error {
-	tasks, err := m.DB.FindByState(0, 0, models.Full, models.Initializing)
+	tasks, err := m.DB.ListTasks(0, 0, models.Full, nil, []models.State{models.Initializing})
 	if err != nil {
 		return err
 	}
@@ -150,7 +153,7 @@ func (m *Master) RunTask(task *models.Task, node *models.Node, res chan<- *model
 // CheckTasks will iterate over running tasks checking if they have been completed well or not.
 // It runs concurrently.
 func (m *Master) CheckTasks() error {
-	tasks, err := m.DB.FindByState(0, 0, models.Full, models.Running)
+	tasks, err := m.DB.ListTasks(0, 0, models.Full, nil, []models.State{models.Running})
 	if err != nil {
 		return err
 	}

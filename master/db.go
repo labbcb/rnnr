@@ -1,4 +1,4 @@
-package db
+package master
 
 import (
 	"github.com/labbcb/rnnr/models"
@@ -6,6 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"time"
 )
 
 const (
@@ -15,13 +16,13 @@ const (
 	NodeCollection = "nodes"
 )
 
-// DB wraps MongoDB client to provides task- and node-related operations
+// DB wraps MongoDB client to provides task- and node-related operations.
 type DB struct {
 	client   *mongo.Client
 	database string
 }
 
-// Connect creates a MongoDB client
+// Connect creates a MongoDB client.
 func Connect(uri, database string) (*DB, error) {
 	c, err := mongo.Connect(nil, options.Client().ApplyURI(uri))
 	if err != nil {
@@ -30,13 +31,17 @@ func Connect(uri, database string) (*DB, error) {
 	return &DB{client: c, database: database}, nil
 }
 
-// SaveTask stores a task
+// SaveTask stores a task.
+// It will set Task.Created and Task.Updated to current local time.
 func (d *DB) SaveTask(t *models.Task) error {
+	now := time.Now()
+	t.Created = &now
+	t.Updated = now
 	_, err := d.client.Database(d.database).Collection(TaskCollection).InsertOne(nil, t)
 	return err
 }
 
-// GetTask finds a task by its ID
+// GetTask finds a task by its ID.
 func (d *DB) GetTask(id string) (*models.Task, error) {
 	var t models.Task
 	if err := d.client.Database(d.database).Collection(TaskCollection).FindOne(nil, bson.M{"_id": id}).Decode(&t); err != nil {
@@ -45,23 +50,42 @@ func (d *DB) GetTask(id string) (*models.Task, error) {
 	return &t, nil
 }
 
-// UpdateTask saves task changes in database
+// UpdateTask saves task changes in database.
+// It will set Task.Updated to current local time.
 func (d *DB) UpdateTask(t *models.Task) error {
+	t.Updated = time.Now()
 	return d.client.Database(d.database).Collection(TaskCollection).
 		FindOneAndReplace(nil, bson.M{"_id": t.ID}, &t, options.FindOneAndReplace()).Err()
 }
 
-// FindByState retrieves from database tasks that match given states.
-func (d *DB) FindByState(limit, skip int64, view models.View, states ...models.State) ([]*models.Task, error) {
-	var opts *options.FindOptions = options.Find()
+// ListTasks retrieves tasks that match given worker nodes and states and sorted by last update.
+// Pagination is done via limit and skip parameters.
+// view defines task fields to be returned.
+//
+// Minimal returns only task ID and state.
+//
+// Basic returns all fields except Logs.ExecutorLogs.Stdout, Logs.ExecutorLogs.Stderr, Inputs.Content and Logs.SystemLogs.
+//
+// Full returns all fields.
+func (d *DB) ListTasks(limit, skip int64, view models.View, nodes []string, states []models.State) ([]*models.Task, error) {
+	opts := options.Find()
 	if limit > 0 {
 		opts.SetLimit(limit)
 	}
 	opts.SetSkip(skip)
+	opts.SetSort(bson.D{{"updated", -1}})
 
-	var filter bson.M
+	var filters bson.A
+	if len(nodes) != 0 {
+		filters = append(filters, bson.M{"worker.host": bson.M{"$in": nodes}})
+	}
 	if len(states) != 0 {
-		filter = bson.M{"state": bson.M{"$in": states}}
+		filters = append(filters, bson.M{"state": bson.M{"$in": states}})
+	}
+
+	filter := bson.D{}
+	if len(filters) > 0 {
+		filter = bson.D{{"$and", filters}}
 	}
 
 	var projection bson.M
@@ -98,9 +122,15 @@ func (d *DB) FindByState(limit, skip int64, view models.View, states ...models.S
 	return tasks, nil
 }
 
-// AllNodes returns all nodes.
-func (d *DB) AllNodes() ([]*models.Node, error) {
-	cursor, err := d.client.Database(d.database).Collection(NodeCollection).Find(nil, bson.D{{}}, options.Find())
+// ListNodes returns worker nodes (disabled included).
+// Set active to return active (enabled) or disable nodes.
+func (d *DB) ListNodes(active *bool) ([]*models.Node, error) {
+	var filter bson.M
+	if active != nil {
+		filter = bson.M{"active": active}
+	}
+
+	cursor, err := d.client.Database(d.database).Collection(NodeCollection).Find(nil, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -127,8 +157,8 @@ func (d *DB) GetNode(host string) (*models.Node, error) {
 	return &n, nil
 }
 
-// AddNodes activates a node. If already registered it updates node fields with same ID.
-func (d *DB) AddNodes(n *models.Node) error {
+// AddNode activates a node. If already registered it updates node fields with same ID.
+func (d *DB) AddNode(n *models.Node) error {
 	_, err := d.GetNode(n.Host)
 
 	switch err {
@@ -140,19 +170,6 @@ func (d *DB) AddNodes(n *models.Node) error {
 	default:
 		return err
 	}
-}
-
-// GetActiveNodes returns active computing nodes.
-func (d *DB) GetActiveNodes() ([]*models.Node, error) {
-	cur, err := d.client.Database(d.database).Collection(NodeCollection).Find(nil, bson.M{"active": true})
-	if err != nil {
-		return nil, err
-	}
-	var ns []*models.Node
-	if err := cur.All(nil, &ns); err != nil {
-		return nil, err
-	}
-	return ns, nil
 }
 
 // UpdateNode updates node information.

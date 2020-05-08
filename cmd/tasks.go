@@ -4,41 +4,54 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/labbcb/rnnr/client"
 	"github.com/labbcb/rnnr/models"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var all, errors bool
+var nodes, states []string
 
 var tasksCmd = &cobra.Command{
 	Use:     "tasks",
 	Aliases: []string{"ls", "list"},
-	Short:   "List active tasks",
-	Long:    "It will print only active tasks (QUEUED and RUNNING) tasks by default.",
+	Short:   "Get tasks",
+	Long: "It will print only active tasks by default.\n" +
+		"Use --all to get all tasks or --error to get failed tasks.\n" +
+		"Use one or more --state parameter to filter by task states.\n" +
+		"Valid states are queued, initializing, running, paused, complete,\n" +
+		"executor_error, system_error and canceled. States are case insensitive.\n" +
+		"Use one or more --node parameter to filter by worker nodes.",
 	Run: func(cmd *cobra.Command, args []string) {
 		if all && errors {
-			log.Fatal("Use either --all or --error flags but not both.")
+			messageAndExit("Use either --all or --error flags but not both.")
+		}
+		if len(states) > 0 && (all || errors) {
+			messageAndExit("Use either --all or --error flags or --state parameter.")
 		}
 
-		var states []models.State
+		var filterStates []models.State
 		if errors {
-			states = []models.State{models.ExecutorError, models.SystemError}
+			filterStates = models.ErrorStates()
 		} else if !all {
-			states = []models.State{models.Queued, models.Initializing, models.Running, models.Paused}
+			filterStates = models.ActiveStates()
+		} else if len(states) > 0 {
+			for _, state := range states {
+				filterStates = append(filterStates, models.State(strings.ToUpper(state)))
+			}
 		}
 
 		host := viper.GetString("host")
-		resp, err := client.ListTasks(host, 0, "", models.Basic, states)
-		fatalOnErr(err)
+		resp, err := client.ListTasks(host, 0, "", models.Basic, nodes, filterStates)
+		exitOnErr(err)
 
 		format := viper.GetString("format")
 		if format == "json" {
 			err := json.NewEncoder(os.Stdout).Encode(resp.Tasks)
-			fatalOnErr(err)
+			exitOnErr(err)
 			return
 		}
 
@@ -66,5 +79,7 @@ var tasksCmd = &cobra.Command{
 func init() {
 	tasksCmd.Flags().BoolVarP(&all, "all", "a", false, "Print all tasks.")
 	tasksCmd.Flags().BoolVarP(&errors, "error", "e", false, "Print only tasks with error states.")
+	tasksCmd.Flags().StringArrayVarP(&nodes, "node", "n", nil, "Filter tasks by worker nodes.")
+	tasksCmd.Flags().StringArrayVarP(&states, "state", "s", nil, "Filter tasks by task states.")
 	rootCmd.AddCommand(tasksCmd)
 }

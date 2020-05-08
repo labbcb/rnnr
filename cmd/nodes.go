@@ -6,24 +6,26 @@ import (
 	"os"
 
 	"github.com/labbcb/rnnr/client"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
+var onlyActive bool
+
 var nodesCmd = &cobra.Command{
 	Use:   "nodes",
-	Short: "List computing nodes",
+	Short: "List worker nodes",
+	Long: "It will print worker nodes with number of active tasks and resource information.\n" +
+		"Use --active to print only enabled nodes.\n" +
+		"Use --format json to print in JSON format.",
 	Run: func(cmd *cobra.Command, args []string) {
 		host := viper.GetString("host")
-		nodes, err := client.ListNodes(host)
-		fatalOnErr(err)
+		nodes, err := client.ListNodes(host, onlyActive)
+		exitOnErr(err)
 
 		format := viper.GetString("format")
 		if format == "json" {
-			if err := json.NewEncoder(os.Stdout).Encode(nodes); err != nil {
-				log.Fatal(err)
-			}
+			exitOnErr(json.NewEncoder(os.Stdout).Encode(nodes))
 			return
 		}
 
@@ -42,5 +44,6 @@ var nodesCmd = &cobra.Command{
 }
 
 func init() {
+	nodesCmd.Flags().BoolVarP(&onlyActive, "active", "a", false, "Get only active nodes.")
 	rootCmd.AddCommand(nodesCmd)
 }

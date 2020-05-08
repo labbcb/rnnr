@@ -30,6 +30,21 @@ const (
 	Canceled State = "CANCELED"
 )
 
+// ActiveStates returns task states considered active.
+func ActiveStates() []State {
+	return []State{Queued, Initializing, Running, Paused}
+}
+
+// ErrorStates returns task states considered failed.
+func ErrorStates() []State {
+	return []State{ExecutorError, SystemError}
+}
+
+// TerminatedStates returns task states considered completed.
+func TerminatedStates() []State {
+	return []State{Complete, ExecutorError, SystemError, Canceled}
+}
+
 // FileType can be file or directory
 type FileType string
 
@@ -132,21 +147,22 @@ type Worker struct {
 
 // Task is a collection of command to be executed to process data
 type Task struct {
-	ID           string            `json:"id" bson:"_id"`
-	Name         string            `json:"name,omitempty"`
-	Description  string            `json:"description,omitempty"`
-	CreationTime *time.Time        `json:"creation_time,omitempty"`
-	State        State             `json:"state"`
-	Resources    *Resources        `json:"resources,omitempty"`
-	Executors    []Executor        `json:"executors,omitempty"`
-	Inputs       []*Input          `json:"inputs,omitempty"`
-	Outputs      []*Output         `json:"outputs,omitempty"`
-	Volumes      []string          `json:"volumes,omitempty"`
-	Tags         map[string]string `json:"tags,omitempty"`
-	Logs         *Log              `json:"logs,omitempty"`
+	ID          string            `json:"id" bson:"_id"`
+	Name        string            `json:"name,omitempty"`
+	Description string            `json:"description,omitempty"`
+	Created     *time.Time        `json:"creation_time,omitempty"`
+	State       State             `json:"state"`
+	Resources   *Resources        `json:"resources,omitempty"`
+	Executors   []Executor        `json:"executors,omitempty"`
+	Inputs      []*Input          `json:"inputs,omitempty"`
+	Outputs     []*Output         `json:"outputs,omitempty"`
+	Volumes     []string          `json:"volumes,omitempty"`
+	Tags        map[string]string `json:"tags,omitempty"`
+	Logs        *Log              `json:"logs,omitempty"`
 
 	// RNNR specific fields.
-	Worker *Worker `json:"worker,omitempty"`
+	Worker  *Worker   `json:"worker,omitempty"`
+	Updated time.Time `json:"updated"`
 }
 
 // ListTasksResponse represents a list of tasks previous submitted to system
@@ -188,6 +204,11 @@ func (t *Task) Active() bool {
 // Failed returns true if task failed (executor error and system error).
 func (t *Task) Failed() bool {
 	return t.State == ExecutorError || t.State == SystemError
+}
+
+// Terminated returns true if task is completed (complete, executor error, system error and canceled).
+func (t *Task) Terminated() bool {
+	return t.State == Complete || t.State == ExecutorError || t.State == SystemError || t.State == Canceled
 }
 
 func (t *Task) String() string {

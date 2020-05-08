@@ -1,28 +1,24 @@
+// Package worker implements RNNR worker logic.
 package worker
 
 import (
 	"context"
-	"runtime"
-	"time"
-
-	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/labbcb/rnnr/docker"
 	"github.com/labbcb/rnnr/pb"
 	"github.com/pbnjay/memory"
 	log "github.com/sirupsen/logrus"
+	"runtime"
 )
 
 // Worker struct wraps service info and Docker connection.
 type Worker struct {
 	Info   *pb.Info
-	Docker *docker.Docker
+	Docker *Docker
 }
 
 // New creates a Worker.
 func New(cpuCores int32, ramGb float64) (*Worker, error) {
-	conn, err := docker.Connect()
+	conn, err := Connect()
 	if err != nil {
 		return nil, err
 	}
@@ -87,9 +83,4 @@ func (w *Worker) StopContainer(ctx context.Context, container *pb.Container) (*e
 	log.WithField("id", container.Id).Info("Container stopped.")
 	w.Docker.RemoveContainer(ctx, container.Id)
 	return &empty.Empty{}, nil
-}
-
-func asTime(p *timestamp.Timestamp) time.Time {
-	t, _ := ptypes.Timestamp(p)
-	return t
 }

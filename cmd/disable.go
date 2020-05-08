@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/labbcb/rnnr/client"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -10,16 +9,21 @@ import (
 var cancel bool
 
 var disableCmd = &cobra.Command{
-	Use:     "disable url...",
+	Use:     "disable id...",
 	Aliases: []string{"remove", "rm"},
-	Short:   "Disable or more worker nodes. Tasks will keep running at disabled node but no tasks will be delagated to worker. Cancel option tells server to cancel tasks in node and enqueue those tasks.",
-	Args:    cobra.MinimumNArgs(1),
+	Short:   "Disable or more worker nodes",
+	Long: "Tasks will keep running at disabled node but no tasks will be submitted to worker.\n" +
+		"Cancel option tells master server to cancel all tasks in node and enqueue those tasks.\n" +
+		"It will print IDs of successfully disabled nodes.",
+	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		host := viper.GetString("host")
 		for _, id := range args {
 			if err := client.DisableNode(host, id, cancel); err != nil {
-				log.Printf("Unable to disable worker %s: %s\n", id, err)
+				message("Unable to disable worker %s: %s\n", id, err)
+				continue
 			}
+			println(id)
 		}
 	},
 }
