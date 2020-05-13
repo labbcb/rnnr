@@ -56,7 +56,7 @@ func (m *Master) CancelTask(id string) error {
 		return m.DB.UpdateTask(task)
 	}
 
-	node, err := m.DB.GetNode(task.Worker.Host)
+	node, err := m.DB.GetNode(task.Host)
 	if err != nil {
 		return err
 	}

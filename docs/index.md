@@ -169,6 +169,20 @@ Done. Cromwell will be available to run submitted workflows.
 java -jar cromwell-48.jar submit --host http://master:8000 examples/hello.wdl
 ```
 
+## Command line
+
+Export all tasks as JSON.
+
+```bash
+rnnr ls --all --format json > rnnr_tasks.json
+```
+
+Export worker nodes as JSON.
+
+```bash
+rnnr nodes --format json > rnnr_nodes.json
+```
+
 ## Development
 
 Generate Go code from ProtoBuffer file

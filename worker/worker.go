@@ -10,13 +10,13 @@ import (
 	"runtime"
 )
 
-// Worker struct wraps service info and Docker connection.
+// Metrics struct wraps service info and Docker connection.
 type Worker struct {
 	Info   *pb.Info
 	Docker *Docker
 }
 
-// New creates a Worker.
+// New creates a Metrics.
 func New(cpuCores int32, ramGb float64) (*Worker, error) {
 	conn, err := Connect()
 	if err != nil {

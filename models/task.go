@@ -133,10 +133,8 @@ type Log struct {
 	SystemLogs []string `json:"system_logs,omitempty"`
 }
 
-// Worker represents a active computing node.
-type Worker struct {
-	// Hostname of computing node.
-	Host string `json:"host,omitempty"`
+// Metrics represents a active computing node.
+type Metrics struct {
 	// Total CPU time in nanoseconds across all cores.
 	CPUTime uint64 `json:"cpu_time"`
 	// Maximum CPU percentage ever recorded.
@@ -161,7 +159,8 @@ type Task struct {
 	Logs        *Log              `json:"logs,omitempty"`
 
 	// RNNR specific fields.
-	Worker  *Worker   `json:"worker,omitempty"`
+	Host    string    `json:"host,omitempty"`
+	Metrics *Metrics  `json:"metrics,omitempty"`
 	Updated time.Time `json:"updated"`
 }
 
@@ -213,8 +212,8 @@ func (t *Task) Terminated() bool {
 
 func (t *Task) String() string {
 	var host string
-	if t.Worker != nil {
-		host = " at " + t.Worker.Host
+	if t.Host != "" {
+		host = " at " + t.Host
 	}
 	return fmt.Sprintf("task %s CPU=%d RAM=%.2f %s%s", t.ID, t.Resources.CPUCores, t.Resources.RAMGb, t.State, host)
 }

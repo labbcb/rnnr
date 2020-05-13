@@ -444,14 +444,14 @@ var file_worker_proto_depIdxs = []int32{
 	1, // 2: pb.Container.outputs:type_name -> pb.Volume
 	1, // 3: pb.Container.inputs:type_name -> pb.Volume
 	4, // 4: pb.Container.env:type_name -> pb.Container.EnvEntry
-	6, // 5: pb.Worker.GetInfo:input_type -> google.protobuf.Empty
-	3, // 6: pb.Worker.RunContainer:input_type -> pb.Container
-	3, // 7: pb.Worker.CheckContainer:input_type -> pb.Container
-	3, // 8: pb.Worker.StopContainer:input_type -> pb.Container
-	0, // 9: pb.Worker.GetInfo:output_type -> pb.Info
-	6, // 10: pb.Worker.RunContainer:output_type -> google.protobuf.Empty
-	2, // 11: pb.Worker.CheckContainer:output_type -> pb.State
-	6, // 12: pb.Worker.StopContainer:output_type -> google.protobuf.Empty
+	6, // 5: pb.Metrics.GetInfo:input_type -> google.protobuf.Empty
+	3, // 6: pb.Metrics.RunContainer:input_type -> pb.Container
+	3, // 7: pb.Metrics.CheckContainer:input_type -> pb.Container
+	3, // 8: pb.Metrics.StopContainer:input_type -> pb.Container
+	0, // 9: pb.Metrics.GetInfo:output_type -> pb.Info
+	6, // 10: pb.Metrics.RunContainer:output_type -> google.protobuf.Empty
+	2, // 11: pb.Metrics.CheckContainer:output_type -> pb.State
+	6, // 12: pb.Metrics.StopContainer:output_type -> google.protobuf.Empty
 	9, // [9:13] is the sub-list for method output_type
 	5, // [5:9] is the sub-list for method input_type
 	5, // [5:5] is the sub-list for extension type_name
@@ -542,7 +542,7 @@ var _ grpc.ClientConnInterface
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion6
 
-// WorkerClient is the client API for Worker service.
+// WorkerClient is the client API for Metrics service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type WorkerClient interface {
@@ -562,7 +562,7 @@ func NewWorkerClient(cc grpc.ClientConnInterface) WorkerClient {
 
 func (c *workerClient) GetInfo(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*Info, error) {
 	out := new(Info)
-	err := c.cc.Invoke(ctx, "/pb.Worker/GetInfo", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/pb.Metrics/GetInfo", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -571,7 +571,7 @@ func (c *workerClient) GetInfo(ctx context.Context, in *empty.Empty, opts ...grp
 
 func (c *workerClient) RunContainer(ctx context.Context, in *Container, opts ...grpc.CallOption) (*empty.Empty, error) {
 	out := new(empty.Empty)
-	err := c.cc.Invoke(ctx, "/pb.Worker/RunContainer", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/pb.Metrics/RunContainer", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -580,7 +580,7 @@ func (c *workerClient) RunContainer(ctx context.Context, in *Container, opts ...
 
 func (c *workerClient) CheckContainer(ctx context.Context, in *Container, opts ...grpc.CallOption) (*State, error) {
 	out := new(State)
-	err := c.cc.Invoke(ctx, "/pb.Worker/CheckContainer", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/pb.Metrics/CheckContainer", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -589,14 +589,14 @@ func (c *workerClient) CheckContainer(ctx context.Context, in *Container, opts .
 
 func (c *workerClient) StopContainer(ctx context.Context, in *Container, opts ...grpc.CallOption) (*empty.Empty, error) {
 	out := new(empty.Empty)
-	err := c.cc.Invoke(ctx, "/pb.Worker/StopContainer", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/pb.Metrics/StopContainer", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// WorkerServer is the server API for Worker service.
+// WorkerServer is the server API for Metrics service.
 type WorkerServer interface {
 	GetInfo(context.Context, *empty.Empty) (*Info, error)
 	RunContainer(context.Context, *Container) (*empty.Empty, error)
@@ -635,7 +635,7 @@ func _Worker_GetInfo_Handler(srv interface{}, ctx context.Context, dec func(inte
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/pb.Worker/GetInfo",
+		FullMethod: "/pb.Metrics/GetInfo",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WorkerServer).GetInfo(ctx, req.(*empty.Empty))
@@ -653,7 +653,7 @@ func _Worker_RunContainer_Handler(srv interface{}, ctx context.Context, dec func
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/pb.Worker/RunContainer",
+		FullMethod: "/pb.Metrics/RunContainer",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WorkerServer).RunContainer(ctx, req.(*Container))
@@ -671,7 +671,7 @@ func _Worker_CheckContainer_Handler(srv interface{}, ctx context.Context, dec fu
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/pb.Worker/CheckContainer",
+		FullMethod: "/pb.Metrics/CheckContainer",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WorkerServer).CheckContainer(ctx, req.(*Container))
@@ -689,7 +689,7 @@ func _Worker_StopContainer_Handler(srv interface{}, ctx context.Context, dec fun
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/pb.Worker/StopContainer",
+		FullMethod: "/pb.Metrics/StopContainer",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WorkerServer).StopContainer(ctx, req.(*Container))
@@ -698,7 +698,7 @@ func _Worker_StopContainer_Handler(srv interface{}, ctx context.Context, dec fun
 }
 
 var _Worker_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "pb.Worker",
+	ServiceName: "pb.Metrics",
 	HandlerType: (*WorkerServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

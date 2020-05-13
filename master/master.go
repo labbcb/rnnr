@@ -74,9 +74,7 @@ func (m *Master) InitializeTasks() error {
 		node, err := m.RequestNode(task.Resources)
 		switch err.(type) {
 		case nil:
-			task.Worker = &models.Worker{
-				Host: node.Host,
-			}
+			task.Host = node.Host
 			task.State = models.Initializing
 			now := time.Now()
 			task.Logs.StartTime = &now
@@ -84,7 +82,7 @@ func (m *Master) InitializeTasks() error {
 				log.WithError(err).WithFields(log.Fields{"id": task.ID, "name": task.Name}).Error("Unable to update task.")
 				continue
 			}
-			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host}).Info("Task initialized.")
+			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Host}).Info("Task initialized.")
 		case *NoActiveNodes:
 			log.Warn("No active nodes")
 		case *NoEnoughResources:
@@ -106,9 +104,9 @@ func (m *Master) RunTasks() error {
 	wg := &sync.WaitGroup{}
 	wg.Add(len(tasks))
 	for _, task := range tasks {
-		node, err := m.DB.GetNode(task.Worker.Host)
+		node, err := m.DB.GetNode(task.Host)
 		if err != nil {
-			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host}).Error("Unable to get node.")
+			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Host}).Error("Unable to get node.")
 			continue
 		}
 
@@ -136,15 +134,16 @@ func (m *Master) RunTask(task *models.Task, node *models.Node, res chan<- *model
 	switch err := RemoteRun(task, node.Address()).(type) {
 	case nil:
 		task.State = models.Running
-		log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host}).Info("Task running.")
+		task.Metrics = &models.Metrics{}
+		log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Host}).Info("Task running.")
 	case *NetworkError:
-		log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.Worker.Host}).Warn("Network error.")
+		log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.Host}).Warn("Network error.")
 	default:
 		task.State = models.SystemError
 		now := time.Now()
 		task.Logs.EndTime = &now
 		task.Logs.SystemLogs = []string{err.Error()}
-		log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host, "state": task.State, "error": err}).Error("Unable to run task.")
+		log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Host, "state": task.State, "error": err}).Error("Unable to run task.")
 	}
 
 	res <- task
@@ -162,9 +161,9 @@ func (m *Master) CheckTasks() error {
 	wg := &sync.WaitGroup{}
 	wg.Add(len(tasks))
 	for _, task := range tasks {
-		node, err := m.DB.GetNode(task.Worker.Host)
+		node, err := m.DB.GetNode(task.Host)
 		if err != nil {
-			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host}).Error("Unable to get node.")
+			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Host}).Error("Unable to get node.")
 			continue
 		}
 
@@ -194,14 +193,14 @@ func CheckTask(task *models.Task, node *models.Node, res chan<- *models.Task, wg
 		if task.State != models.Running {
 			now := time.Now()
 			task.Logs.EndTime = &now
-			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host, "state": task.State}).Info("Task finished.")
+			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Host, "state": task.State}).Info("Task finished.")
 		}
 	case *NetworkError:
-		log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.Worker.Host}).Warn("Network error.")
+		log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.Host}).Warn("Network error.")
 	default:
 		task.State = models.SystemError
 		task.Logs.SystemLogs = append(task.Logs.SystemLogs, err.Error())
-		log.WithError(err).WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Worker.Host, "state": task.State}).Error("Unable to check task.")
+		log.WithError(err).WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Host, "state": task.State}).Error("Unable to check task.")
 	}
 
 	res <- task

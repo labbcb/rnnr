@@ -85,13 +85,13 @@ func RemoteCheck(task *models.Task, address string) error {
 		task.Logs.ExecutorLogs = executorLogs(state)
 	} else {
 		// update worker stats
-		task.Worker.CPUTime = state.CpuTime
-		task.Worker.CPUPercentage = state.CpuPercent
-		if state.CpuTime > task.Worker.CPUTime {
-			task.Worker.CPUTime = state.CpuTime
+		task.Metrics.CPUTime = state.CpuTime
+		task.Metrics.CPUPercentage = state.CpuPercent
+		if state.CpuTime > task.Metrics.CPUTime {
+			task.Metrics.CPUTime = state.CpuTime
 		}
-		if state.Memory > task.Worker.Memory {
-			task.Worker.Memory = state.Memory
+		if state.Memory > task.Metrics.Memory {
+			task.Metrics.Memory = state.Memory
 		}
 	}
 	return nil
