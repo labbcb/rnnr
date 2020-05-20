@@ -14,9 +14,8 @@ var viewCmd = &cobra.Command{
 	Use:     "view id...",
 	Aliases: []string{"get"},
 	Short:   "Get one or more tasks by their IDs",
-	Long: "Tasks are sorted by last update.\n" +
-		"Use --format json to print in JSON format.",
-	Args: cobra.MinimumNArgs(1),
+	Long:    "Use --format json to print in JSON format.",
+	Args:    cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		host := viper.GetString("host")
 		for _, id := range args {

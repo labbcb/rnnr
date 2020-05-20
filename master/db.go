@@ -58,7 +58,7 @@ func (d *DB) UpdateTask(t *models.Task) error {
 		FindOneAndReplace(nil, bson.M{"_id": t.ID}, &t, options.FindOneAndReplace()).Err()
 }
 
-// ListTasks retrieves tasks that match given worker nodes and states and sorted by last update.
+// ListTasks retrieves tasks that match given worker nodes and states.
 // Pagination is done via limit and skip parameters.
 // view defines task fields to be returned.
 //
@@ -73,7 +73,6 @@ func (d *DB) ListTasks(limit, skip int64, view models.View, nodes []string, stat
 		opts.SetLimit(limit)
 	}
 	opts.SetSkip(skip)
-	opts.SetSort(bson.D{{"updated", -1}})
 
 	var filters bson.A
 	if len(nodes) != 0 {
