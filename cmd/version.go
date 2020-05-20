@@ -8,7 +8,7 @@ import (
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Prints RNNR version",
+	Short: "Prints version",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("1.1.1")
 	},

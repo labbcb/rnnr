@@ -36,7 +36,6 @@ func Connect(uri, database string) (*DB, error) {
 func (d *DB) SaveTask(t *models.Task) error {
 	now := time.Now()
 	t.Created = &now
-	t.Updated = now
 	_, err := d.client.Database(d.database).Collection(TaskCollection).InsertOne(nil, t)
 	return err
 }
@@ -53,7 +52,6 @@ func (d *DB) GetTask(id string) (*models.Task, error) {
 // UpdateTask saves task changes in database.
 // It will set Task.Updated to current local time.
 func (d *DB) UpdateTask(t *models.Task) error {
-	t.Updated = time.Now()
 	return d.client.Database(d.database).Collection(TaskCollection).
 		FindOneAndReplace(nil, bson.M{"_id": t.ID}, &t, options.FindOneAndReplace()).Err()
 }

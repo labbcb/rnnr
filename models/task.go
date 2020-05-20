@@ -159,9 +159,8 @@ type Task struct {
 	Logs        *Log              `json:"logs,omitempty"`
 
 	// RNNR specific fields.
-	Host    string    `json:"host,omitempty"`
-	Metrics *Metrics  `json:"metrics,omitempty"`
-	Updated time.Time `json:"updated"`
+	Host    string   `json:"host,omitempty"`
+	Metrics *Metrics `json:"metrics,omitempty"`
 }
 
 // ListTasksResponse represents a list of tasks previous submitted to system
