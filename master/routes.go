@@ -13,16 +13,16 @@ import (
 
 // Register binds endpoints for node management
 func (m *Master) register() {
-	m.Router.HandleFunc("/nodes", m.handleListNodes()).Methods(http.MethodGet)
-	m.Router.HandleFunc("/nodes", m.handleEnableNode()).Methods(http.MethodPost)
-	m.Router.HandleFunc("/nodes/{id}", m.handleGetNode()).Methods(http.MethodGet)
-	m.Router.HandleFunc("/nodes/{id}:disable", m.handleDisableNode()).Methods(http.MethodPost)
+	m.Router.HandleFunc("/v1/nodes", m.handleListNodes()).Methods(http.MethodGet)
+	m.Router.HandleFunc("/v1/nodes", m.handleEnableNode()).Methods(http.MethodPost)
+	m.Router.HandleFunc("/v1/nodes/{id}", m.handleGetNode()).Methods(http.MethodGet)
+	m.Router.HandleFunc("/v1/nodes/{id}:disable", m.handleDisableNode()).Methods(http.MethodPost)
 
-	m.Router.HandleFunc("/tasks", m.handleListTasks()).Methods(http.MethodGet)
-	m.Router.HandleFunc("/tasks", m.handleCreateTask()).Methods(http.MethodPost)
-	m.Router.HandleFunc("/tasks/{id}", m.handleGetTask()).Methods(http.MethodGet)
-	m.Router.HandleFunc("/tasks/{id}:cancel", m.handleCancelTask()).Methods(http.MethodPost)
-	m.Router.HandleFunc("/tasks/service-info", m.handleGetServiceInfo()).Methods(http.MethodGet)
+	m.Router.HandleFunc("/v1/tasks", m.handleListTasks()).Methods(http.MethodGet)
+	m.Router.HandleFunc("/v1/tasks", m.handleCreateTask()).Methods(http.MethodPost)
+	m.Router.HandleFunc("/v1/tasks/{id}", m.handleGetTask()).Methods(http.MethodGet)
+	m.Router.HandleFunc("/v1/tasks/{id}:cancel", m.handleCancelTask()).Methods(http.MethodPost)
+	m.Router.HandleFunc("/v1/tasks/service-info", m.handleGetServiceInfo()).Methods(http.MethodGet)
 }
 
 func (m *Master) handleListNodes() http.HandlerFunc {

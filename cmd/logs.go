@@ -24,13 +24,13 @@ var logsCmd = &cobra.Command{
 		}
 		if stdout || stderr {
 			if stdout {
-				println(t.Logs.ExecutorLogs[0].Stdout)
+				println(t.Logs[0].ExecutorLogs[0].Stdout)
 			}
 			if stderr {
-				println(t.Logs.ExecutorLogs[0].Stderr)
+				println(t.Logs[0].ExecutorLogs[0].Stderr)
 			}
 		} else {
-			println(t.Logs.SystemLogs)
+			println(t.Logs[0].SystemLogs)
 		}
 	},
 }

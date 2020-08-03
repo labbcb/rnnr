@@ -166,39 +166,49 @@ func mounts(t *pb.Container) []mount.Mount {
 	var volumes []mount.Mount
 
 	for _, output := range t.Outputs {
-		volumes = addVolume(volumes, mount.Mount{
-			Type:   mount.TypeBind,
-			Source: filepath.Dir(output.HostPath),
-			Target: filepath.Dir(output.ContainerPath),
-		})
+		volumes = addVolume(volumes, output.HostPath, output.ContainerPath, false)
 	}
 
 	for _, input := range t.Inputs {
-		volumes = addVolume(volumes, mount.Mount{
-			Type:     mount.TypeBind,
-			Source:   filepath.Dir(input.HostPath),
-			Target:   filepath.Dir(input.ContainerPath),
-			ReadOnly: true,
-		})
+		volumes = addVolume(volumes, input.HostPath, input.ContainerPath, true)
 	}
 
 	return volumes
 }
 
-func addVolume(volumes []mount.Mount, v mount.Mount) []mount.Mount {
-	// iterate over already added volumes to check if they are the same
+func addVolume(volumes []mount.Mount, hostPath, containerPath string, readOnly bool) []mount.Mount {
+
+	hostDir := filepath.Dir(hostPath)
+	containerDir := filepath.Dir(containerPath)
+
 	for i := range volumes {
-		if volumes[i].Target == v.Target {
+		// if container path is subpath of already added volume
+		if strings.HasPrefix(containerPath, volumes[i].Target) {
+
+			// if is read-only and host path is different of added volume
+			if readOnly && hostDir != volumes[i].Source {
+				return append(volumes, mount.Mount{
+					Type:     mount.TypeBind,
+					Source:   hostPath,
+					Target:   containerPath,
+					ReadOnly: readOnly,
+				})
+			}
 			return volumes
 		}
-		if strings.HasPrefix(volumes[i].Target, v.Target) {
-			volumes[i] = v
-			return volumes
-		}
-		if strings.HasPrefix(v.Target, volumes[i].Target) {
+
+		// if volume is subpath of container path
+		if strings.HasPrefix(volumes[i].Target, containerDir) {
+			volumes[i].Source = hostDir
+			volumes[i].Target = containerDir
 			return volumes
 		}
 	}
 
-	return append(volumes, v)
+	return append(volumes, mount.Mount{
+		Type:     mount.TypeBind,
+		Source:   hostDir,
+		Target:   containerDir,
+		ReadOnly: readOnly,
+	})
 }

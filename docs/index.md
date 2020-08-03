@@ -16,7 +16,7 @@ The master server and worker instances do not manage any workflow or task files.
 rnnr master
 ```
 
-RNNR master server endpoint is <http://localhost:8080/tasks>.
+RNNR master server endpoint is <http://localhost:8080/v1/tasks>.
 
 Run RNNR worker server. Requires Docker server.
 
@@ -30,7 +30,8 @@ Add worker node.
 rnnr add localhost
 ```
 
-Run Cromwell with RNNR.
+## Run Cromwell
+
 Cromwell utilizes TES backend to submit jobs.
 For more information see <https://cromwell.readthedocs.io/en/stable/backends/TES/>.
 Get latest Cromwell at <https://github.com/broadinstitute/cromwell/releases>.
@@ -46,6 +47,20 @@ java -Dconfig.file=examples/cromwell.conf -jar cromwell-48.jar server
 ``` 
 
 Cromwell server endpoint is <http://localhost:8000>
+
+## Run Nextflow
+
+[Nextflow](https://www.nextflow.io/) is a domain specific language and workflow execution system.
+This system supports [GA4GH TES API](https://www.nextflow.io/docs/latest/executor.html#ga4gh-tes).
+The following code runs a very simple workflow using Nextflow and RNNR.
+
+```bash
+export NXF_WORK=/home/nfs/tmp/nextflow-executions
+export NXF_MODE=ga4gh
+export NXF_EXECUTOR=tes
+export NXF_EXECUTOR_TES_ENDPOINT='http://localhost:8080'
+nextflow run examples/tutorial.nf
+```
 
 ## Deployment
 
@@ -92,11 +107,11 @@ docker container run \
 > and `rnnr` container exposing port `8080`.
 
 At this point we need a Cromwell configuration file.
-See [cromwell-docker.yml](cromwell-docker.conf) for example.
-It set Cromwell workflow logs to `/home/nfs/cromwell-workflow-logs` and workflow root to `/home/nfs/cromwell-executions`.
+See [examples/cromwell-docker.yml](examples/cromwell-docker.conf) for example.
+It set Cromwell workflow logs to `/home/nfs/tmp/cromwell-workflow-logs` and workflow root to `/home/nfs/tmp/cromwell-executions`.
 Also set URL of MySQL to `jdbc:mysql://cromwell-db/cromwell?rewriteBatchedStatements=true`, where `cromwell-db` is the name of MySQL container.
 The actor factory `cromwell.backend.impl.tes.TesBackendLifecycleActorFactory` tells Cromwell to use TES backend.
-Endpoint `http://master:8080/tasks` is the RNNR master endpoint, where `master` is the hostname of the server that runs RNNR master. 
+Endpoint `http://master:8080/v1/tasks` is the RNNR master endpoint, where `master` is the hostname of the server that runs RNNR master. 
 We copy this file to `/etc/crowmell.conf`.
 
 Next deploy Cromwell in server mode.

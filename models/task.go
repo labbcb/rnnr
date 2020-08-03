@@ -156,7 +156,7 @@ type Task struct {
 	Outputs     []*Output         `json:"outputs,omitempty"`
 	Volumes     []string          `json:"volumes,omitempty"`
 	Tags        map[string]string `json:"tags,omitempty"`
-	Logs        *Log              `json:"logs,omitempty"`
+	Logs        []*Log            `json:"logs,omitempty"`
 
 	// RNNR specific fields.
 	Host    string   `json:"host,omitempty"`
@@ -220,11 +220,11 @@ func (t *Task) String() string {
 // Elapsed computes elapsed time of task execution.
 func (t *Task) Elapsed() time.Duration {
 	if t.State == Complete {
-		return t.Logs.EndTime.Sub(*t.Logs.StartTime)
+		return t.Logs[0].EndTime.Sub(*t.Logs[0].StartTime)
 	}
 
 	if t.State == Running {
-		return time.Since(*t.Logs.StartTime)
+		return time.Since(*t.Logs[0].StartTime)
 	}
 
 	return time.Duration(0)

@@ -22,7 +22,7 @@ func (m *Master) CreateTask(t *models.Task) error {
 
 	t.ID = uuid.New().String()
 	t.State = models.Queued
-	t.Logs = &models.Log{}
+	t.Logs = []*models.Log{&models.Log{}}
 	if t.Resources.CPUCores == 0 {
 		t.Resources.CPUCores = 1
 	}
@@ -52,7 +52,7 @@ func (m *Master) CancelTask(id string) error {
 	if task.State == models.Queued || task.State == models.Initializing {
 		task.State = models.Canceled
 		now := time.Now()
-		task.Logs.EndTime = &now
+		task.Logs[0].EndTime = &now
 		return m.DB.UpdateTask(task)
 	}
 

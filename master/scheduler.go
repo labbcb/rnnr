@@ -2,6 +2,7 @@ package master
 
 import (
 	"fmt"
+
 	"github.com/labbcb/rnnr/models"
 	log "github.com/sirupsen/logrus"
 )
@@ -159,7 +160,7 @@ func (m *Master) UpdateNodesWorkload(nodes []*models.Node) error {
 
 func (m *Master) enqueueTask(task *models.Task) {
 	task.State = models.Queued
-	task.Logs = &models.Log{}
+	task.Logs = []*models.Log{&models.Log{}}
 	task.Host = ""
 	task.Metrics = nil
 	if err := m.DB.UpdateTask(task); err != nil {

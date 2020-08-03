@@ -25,7 +25,7 @@ const contentType = "application/json"
 //
 // Full returns all fields.
 func ListTasks(host string, pageSize int, pageToken string, view models.View, nodes []string, states []models.State) (*models.ListTasksResponse, error) {
-	u, err := url.Parse(host + "/tasks")
+	u, err := url.Parse(host + "/v1/tasks")
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func ListTasks(host string, pageSize int, pageToken string, view models.View, no
 
 // GetTask retrieves task information given its ID.
 func GetTask(host, id string) (*models.Task, error) {
-	resp, err := http.Get(host + "/tasks/" + id)
+	resp, err := http.Get(host + "/v1/tasks/" + id)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func GetTask(host, id string) (*models.Task, error) {
 
 // CancelTask cancels task by its ID.
 func CancelTask(host, id string) error {
-	resp, err := http.Post(host+"/tasks/"+id+":cancel", "application/json", nil)
+	resp, err := http.Post(host+"/v1/tasks/"+id+":cancel", "application/json", nil)
 	if err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ func EnableNode(host string, n *models.Node) (id string, err error) {
 		return "", fmt.Errorf("encoding node to json: %w", err)
 	}
 
-	resp, err := http.Post(host+"/nodes", contentType, &b)
+	resp, err := http.Post(host+"/v1/nodes", contentType, &b)
 	if err != nil {
 		return "", err
 	}
@@ -142,7 +142,7 @@ func DisableNode(host, id string, cancel bool) error {
 		return fmt.Errorf("encoding cancel option to json: %w", err)
 	}
 
-	resp, err := http.Post(fmt.Sprintf("%s/nodes/%s:disable", host, id), contentType, &b)
+	resp, err := http.Post(fmt.Sprintf("%s/v1/nodes/%s:disable", host, id), contentType, &b)
 	if err != nil {
 		return err
 	}
@@ -160,7 +160,7 @@ func DisableNode(host, id string, cancel bool) error {
 
 // ListNodes retrieves all worker nodes.
 func ListNodes(host string, onlyActive bool) ([]*models.Node, error) {
-	u, err := url.Parse(host + "/nodes")
+	u, err := url.Parse(host + "/v1/nodes")
 	if err != nil {
 		return nil, err
 	}

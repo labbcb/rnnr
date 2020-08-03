@@ -3,20 +3,21 @@ package worker
 
 import (
 	"context"
+	"runtime"
+
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/labbcb/rnnr/pb"
 	"github.com/pbnjay/memory"
 	log "github.com/sirupsen/logrus"
-	"runtime"
 )
 
-// Metrics struct wraps service info and Docker connection.
+// Worker struct wraps service info and Docker connection.
 type Worker struct {
 	Info   *pb.Info
 	Docker *Docker
 }
 
-// New creates a Metrics.
+// New creates a Worker.
 func New(cpuCores int32, ramGb float64) (*Worker, error) {
 	conn, err := Connect()
 	if err != nil {

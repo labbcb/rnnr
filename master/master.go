@@ -77,7 +77,7 @@ func (m *Master) InitializeTasks() error {
 			task.Host = node.Host
 			task.State = models.Initializing
 			now := time.Now()
-			task.Logs.StartTime = &now
+			task.Logs[0].StartTime = &now
 			if err := m.DB.UpdateTask(task); err != nil {
 				log.WithError(err).WithFields(log.Fields{"id": task.ID, "name": task.Name}).Error("Unable to update task.")
 				continue
@@ -141,8 +141,8 @@ func (m *Master) RunTask(task *models.Task, node *models.Node, res chan<- *model
 	default:
 		task.State = models.SystemError
 		now := time.Now()
-		task.Logs.EndTime = &now
-		task.Logs.SystemLogs = []string{err.Error()}
+		task.Logs[0].EndTime = &now
+		task.Logs[0].SystemLogs = []string{err.Error()}
 		log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Host, "state": task.State, "error": err}).Error("Unable to run task.")
 	}
 
@@ -192,14 +192,14 @@ func CheckTask(task *models.Task, node *models.Node, res chan<- *models.Task, wg
 	case nil:
 		if task.State != models.Running {
 			now := time.Now()
-			task.Logs.EndTime = &now
+			task.Logs[0].EndTime = &now
 			log.WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Host, "state": task.State}).Info("Task finished.")
 		}
 	case *NetworkError:
 		log.WithError(err).WithFields(log.Fields{"id": task.ID, "host": task.Host}).Warn("Network error.")
 	default:
 		task.State = models.SystemError
-		task.Logs.SystemLogs = append(task.Logs.SystemLogs, err.Error())
+		task.Logs[0].SystemLogs = append(task.Logs[0].SystemLogs, err.Error())
 		log.WithError(err).WithFields(log.Fields{"id": task.ID, "name": task.Name, "host": task.Host, "state": task.State}).Error("Unable to check task.")
 	}
 

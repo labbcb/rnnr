@@ -25,7 +25,6 @@ task Hello {
   }
 
   command {
-    sleep 60
     echo Hello ~{name}! > out.txt
   }
 
