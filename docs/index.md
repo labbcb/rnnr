@@ -200,6 +200,17 @@ rnnr nodes --format json > rnnr_nodes.json
 
 ## Development
 
+Direct dependencies
+
+- [cobra](github.com/spf13/cobra) for command line
+- [viper](github.com/spf13/viper) for configuration files
+- [logrus](github.com/sirupsen/logrus) for logging
+- [mongo](https://github.com/mongodb/mongo-go-driver) for database
+- [mux](github.com/gorilla/mux) for routing requests
+- [uuid](github.com/google/uuid) for unique id generation
+- [docker](https://pkg.go.dev/github.com/docker/docker/client) for container management
+- [grpc](https://pkg.go.dev/mod/google.golang.org/grpc) for master-worker communication
+
 Generate Go code from ProtoBuffer file
 
 ```bash
