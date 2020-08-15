@@ -48,10 +48,6 @@ func (d *Docker) Run(ctx context.Context, container *pb.Container) error {
 	}
 
 	volumes := mounts(container)
-	for i := range volumes {
-		volumes[i].Source = strings.TrimSuffix(volumes[i].Source, "/execution")
-		volumes[i].Target = strings.TrimSuffix(volumes[i].Target, "/execution")
-	}
 
 	return d.runContainer(ctx, container.Id, container.Image, container.Command, container.WorkDir,
 		env, volumes)
