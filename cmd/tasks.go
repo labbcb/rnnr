@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/labbcb/rnnr/client"
@@ -24,7 +26,8 @@ var tasksCmd = &cobra.Command{
 		"Use one or more --state parameter to filter by task states.\n" +
 		"Valid states are queued, initializing, running, paused, complete,\n" +
 		"executor_error, system_error and canceled. States are case insensitive.\n" +
-		"Use one or more --node parameter to filter by worker nodes.",
+		"Use one or more --node parameter to filter by worker nodes.\n" +
+		"Use --format csv to export as CSV.",
 	Run: func(cmd *cobra.Command, args []string) {
 		if all && errors {
 			messageAndExit("Use either --all or --error flags but not both.")
@@ -52,6 +55,64 @@ var tasksCmd = &cobra.Command{
 		if format == "json" {
 			err := json.NewEncoder(os.Stdout).Encode(resp.Tasks)
 			exitOnErr(err)
+			return
+		}
+
+		if format == "csv" {
+			w := csv.NewWriter(os.Stdout)
+			w.Write([]string{
+				"id",
+				"name",
+				"description",
+				"state",
+				"created",
+				"cpu_cores",
+				"memory_gb",
+				"worker_node",
+				"cpu_time",
+				"max_cpu_percentage",
+				"max_memory_bytes",
+				"started",
+				"completed",
+				"executor_started",
+				"executor_completed",
+				"exit_code",
+			})
+
+			for _, t := range resp.Tasks {
+				var started, completed, executorStarted, executorCompleted, exitCode string
+				if t.Terminated() {
+					started = t.Logs[0].StartTime.String()
+					completed = t.Logs[0].EndTime.String()
+					executorStarted = t.Logs[0].ExecutorLogs[0].StartTime.String()
+					executorCompleted = t.Logs[0].ExecutorLogs[0].EndTime.String()
+					exitCode = strconv.FormatInt(int64(t.Logs[0].ExecutorLogs[0].ExitCode), 10)
+				}
+
+				r := []string{
+					t.ID,
+					t.Name,
+					t.Description,
+					string(t.State),
+					t.Created.String(),
+					strconv.FormatInt(int64(t.Resources.CPUCores), 10),
+					strconv.FormatFloat(t.Resources.RAMGb, 'f', -1, 64),
+					t.Host,
+					strconv.FormatUint(t.Metrics.CPUTime, 10),
+					strconv.FormatFloat(t.Metrics.CPUPercentage, 'f', -1, 64),
+					strconv.FormatUint(t.Metrics.Memory, 10),
+					started,
+					completed,
+					executorStarted,
+					executorCompleted,
+					exitCode,
+				}
+				err := w.Write(r)
+				exitOnErr(err)
+			}
+
+			w.Flush()
+			exitOnErr(w.Error())
 			return
 		}
 

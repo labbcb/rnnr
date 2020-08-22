@@ -66,11 +66,11 @@ func initConfig() {
 }
 
 func message(format string, a ...interface{}) {
-	_, _ = fmt.Fprintf(os.Stderr, format, a)
+	_, _ = fmt.Fprintf(os.Stderr, format, a...)
 }
 
 func messageAndExit(format string, a ...interface{}) {
-	message(format, a)
+	message(format, a...)
 	os.Exit(1)
 }
 
