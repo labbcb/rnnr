@@ -1,4 +1,4 @@
-# Distributed task executor for genomics research
+# RNNR: distributed task execution system for scaling reproducible workflows
 
 *RNNR* is a bioinformatics task processing system for distributed computing environments.
 It was designed to work with a workflow management system, such as [Cromwell](https://github.com/broadinstitute/cromwell) and [Nextflow](https://www.nextflow.io/), through the [Task Execution Service (TES) API](https://github.com/ga4gh/task-execution-schemas).
