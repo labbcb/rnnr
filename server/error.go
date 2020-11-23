@@ -1,4 +1,4 @@
-package master
+package server
 
 // NetworkError represents a network error.
 type NetworkError struct {

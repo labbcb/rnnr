@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/labbcb/rnnr/master"
+	"github.com/labbcb/rnnr/server"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -12,11 +12,11 @@ import (
 var database, address string
 var sleepTime int
 
-var masterCmd = &cobra.Command{
-	Use:     "master",
+var mainCmd = &cobra.Command{
+	Use:     "main",
 	Aliases: []string{"server"},
-	Short:   "Start master server",
-	Long: "Start the RNNR master server instance.\n" +
+	Short:   "Start main server",
+	Long: "Start the RNNR main server instance.\n" +
 		"It will listen port 8080. Use --address to change the port suffixed with colon.\n" +
 		"It will connect with MongoDB. use --database to change URL.\n" +
 		"By default monitoring system will iterate over tasks and sleep. Use --time to change sleep time.",
@@ -25,7 +25,7 @@ var masterCmd = &cobra.Command{
 			FullTimestamp: true,
 		})
 
-		m, err := master.New(database, time.Duration(sleepTime)*time.Second)
+		m, err := server.NewMain(database, time.Duration(sleepTime)*time.Second)
 		exitOnErr(err)
 
 		log.Fatal(http.ListenAndServe(address, m.Router))
@@ -33,8 +33,8 @@ var masterCmd = &cobra.Command{
 }
 
 func init() {
-	masterCmd.PersistentFlags().StringVarP(&database, "database", "d", "mongodb://localhost:27017", "URL to Mongo database")
-	masterCmd.PersistentFlags().StringVarP(&address, "address", "a", ":8080", "Address to bind server")
-	masterCmd.Flags().IntVarP(&sleepTime, "time", "t", 5, "Sleep time in second for monitoring system.")
-	rootCmd.AddCommand(masterCmd)
+	mainCmd.PersistentFlags().StringVarP(&database, "database", "d", "mongodb://localhost:27017", "URL to Mongo database")
+	mainCmd.PersistentFlags().StringVarP(&address, "address", "a", ":8080", "Address to bind server")
+	mainCmd.Flags().IntVarP(&sleepTime, "time", "t", 5, "Sleep time in second for monitoring system.")
+	rootCmd.AddCommand(mainCmd)
 }

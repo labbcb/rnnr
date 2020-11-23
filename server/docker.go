@@ -1,4 +1,4 @@
-package worker
+package server
 
 import (
 	"context"
@@ -27,8 +27,8 @@ type Docker struct {
 	client *client.Client
 }
 
-// Connect creates a Docker client using environment variables
-func Connect() (*Docker, error) {
+// DockerConnect creates a Docker client using environment variables
+func DockerConnect() (*Docker, error) {
 	c, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil, err

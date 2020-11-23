@@ -105,7 +105,7 @@ func CancelTask(host, id string) error {
 	return nil
 }
 
-// EnableNode enables worker node at master server returning its ID.
+// EnableNode enables worker node at main server returning its ID.
 func EnableNode(host string, n *models.Node) (id string, err error) {
 	var b bytes.Buffer
 	if err := json.NewEncoder(&b).Encode(n); err != nil {

@@ -1,12 +1,13 @@
-package master
+package server
 
 import (
+	"time"
+
 	"github.com/labbcb/rnnr/models"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"time"
 )
 
 const (
@@ -22,8 +23,8 @@ type DB struct {
 	database string
 }
 
-// Connect creates a MongoDB client.
-func Connect(uri, database string) (*DB, error) {
+// MongoConnect creates a MongoDB client.
+func MongoConnect(uri, database string) (*DB, error) {
 	c, err := mongo.Connect(nil, options.Client().ApplyURI(uri))
 	if err != nil {
 		return nil, err

@@ -13,7 +13,7 @@ var disableCmd = &cobra.Command{
 	Aliases: []string{"remove", "rm"},
 	Short:   "Disable or more worker nodes",
 	Long: "Tasks will keep running at disabled node but no tasks will be submitted to worker.\n" +
-		"Cancel option tells master server to cancel all tasks in node and enqueue those tasks.\n" +
+		"Cancel option tells main server to cancel all tasks in node and enqueue those tasks.\n" +
 		"It will print IDs of successfully disabled nodes.",
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {

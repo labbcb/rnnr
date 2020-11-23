@@ -1,4 +1,5 @@
-package master
+// Package server implements RNNR main logic to manage tasks and worker nodes.
+package server
 
 import (
 	"errors"
@@ -11,7 +12,7 @@ import (
 )
 
 // CreateTask creates a task with new ID and queue state.
-func (m *Master) CreateTask(t *models.Task) error {
+func (m *Main) CreateTask(t *models.Task) error {
 	switch len(t.Executors) {
 	case 0:
 		return errors.New("no executors submitted")
@@ -22,7 +23,7 @@ func (m *Master) CreateTask(t *models.Task) error {
 
 	t.ID = uuid.New().String()
 	t.State = models.Queued
-	t.Logs = []*models.Log{&models.Log{}}
+	t.Logs = []*models.Log{}
 	if t.Resources.CPUCores == 0 {
 		t.Resources.CPUCores = 1
 	}
@@ -30,7 +31,7 @@ func (m *Master) CreateTask(t *models.Task) error {
 }
 
 // GetTask returns a task by its ID.
-func (m *Master) GetTask(id string) (*models.Task, error) {
+func (m *Main) GetTask(id string) (*models.Task, error) {
 	t, err := m.DB.GetTask(id)
 	if err != nil {
 		return nil, err
@@ -39,7 +40,7 @@ func (m *Master) GetTask(id string) (*models.Task, error) {
 }
 
 // CancelTask cancels a task by its ID.
-func (m *Master) CancelTask(id string) error {
+func (m *Main) CancelTask(id string) error {
 	task, err := m.GetTask(id)
 	if err != nil {
 		return err
@@ -68,7 +69,7 @@ func (m *Master) CancelTask(id string) error {
 }
 
 // ListTasks returns all tasks.
-func (m *Master) ListTasks(namePrefix string, limit int64, start int64, view models.View, nodes []string, states []models.State) (*models.ListTasksResponse, error) {
+func (m *Main) ListTasks(namePrefix string, limit int64, start int64, view models.View, nodes []string, states []models.State) (*models.ListTasksResponse, error) {
 	ts, err := m.DB.ListTasks(limit, start, view, nodes, states)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to retrieve all tasks: %w", err)

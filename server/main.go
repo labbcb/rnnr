@@ -1,5 +1,4 @@
-// Package master implements RNNR master logic to manage tasks and worker nodes.
-package master
+package server
 
 import (
 	"fmt"
@@ -11,23 +10,23 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Master is a master instance.
-type Master struct {
+// Main is a main instance.
+type Main struct {
 	Router      *mux.Router
 	DB          *DB
 	ServiceInfo *models.ServiceInfo
 }
 
-// New creates a server and initializes Task and Node endpoints.
+// NewMain creates a server and initializes Task and Node endpoints.
 // database is URI to MongoDB (without database name, which is rnnr).
-// sleepTimes defines the time in seconds that master will sleep after task management iteration.
-func New(database string, sleepTime time.Duration) (*Master, error) {
-	connection, err := Connect(database, "rnnr")
+// sleepTimes defines the time in seconds that main will sleep after task management iteration.
+func NewMain(database string, sleepTime time.Duration) (*Main, error) {
+	connection, err := MongoConnect(database, "rnnr")
 	if err != nil {
 		return nil, fmt.Errorf("connecting to MongoDB: %w", err)
 	}
 
-	master := &Master{
+	main := &Main{
 		Router: mux.NewRouter(),
 		DB:     connection,
 		ServiceInfo: &models.ServiceInfo{
@@ -36,15 +35,15 @@ func New(database string, sleepTime time.Duration) (*Master, error) {
 			Storage: []string{"NFS"},
 		},
 	}
-	master.register()
-	go master.StartTaskManager(sleepTime)
-	return master, nil
+	main.register()
+	go main.StartTaskManager(sleepTime)
+	return main, nil
 }
 
 // StartTaskManager starts task management.
 // It will iterate over: 1) queued tasks; 2) initialized tasks; and 3) running tasks.
 // Then it will sleepTime seconds and start over.
-func (m *Master) StartTaskManager(sleepTime time.Duration) {
+func (m *Main) StartTaskManager(sleepTime time.Duration) {
 	for {
 		if err := m.InitializeTasks(); err != nil {
 			log.WithError(err).Warn("Unable to initialize tasks.")
@@ -64,7 +63,7 @@ func (m *Master) StartTaskManager(sleepTime time.Duration) {
 // InitializeTasks iterates over all Queued tasks requesting a computing node for each task.
 // The selected node is assigned to perform the task. The task changes to the Initializing state.
 // If no active node has enough computing resources to perform the task the same is kept in queue.
-func (m *Master) InitializeTasks() error {
+func (m *Main) InitializeTasks() error {
 	tasks, err := m.DB.ListTasks(0, 0, models.Full, nil, []models.State{models.Queued})
 	if err != nil {
 		return err
@@ -94,7 +93,7 @@ func (m *Master) InitializeTasks() error {
 }
 
 // RunTasks tries to start initialized tasks.
-func (m *Master) RunTasks() error {
+func (m *Main) RunTasks() error {
 	tasks, err := m.DB.ListTasks(0, 0, models.Full, nil, []models.State{models.Initializing})
 	if err != nil {
 		return err
@@ -128,7 +127,7 @@ func (m *Master) RunTasks() error {
 }
 
 // RunTask remotely starts a task.
-func (m *Master) RunTask(task *models.Task, node *models.Node, res chan<- *models.Task, wg *sync.WaitGroup) {
+func (m *Main) RunTask(task *models.Task, node *models.Node, res chan<- *models.Task, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	switch err := RemoteRun(task, node.Address()).(type) {
@@ -151,7 +150,7 @@ func (m *Master) RunTask(task *models.Task, node *models.Node, res chan<- *model
 
 // CheckTasks will iterate over running tasks checking if they have been completed well or not.
 // It runs concurrently.
-func (m *Master) CheckTasks() error {
+func (m *Main) CheckTasks() error {
 	tasks, err := m.DB.ListTasks(0, 0, models.Full, nil, []models.State{models.Running})
 	if err != nil {
 		return err

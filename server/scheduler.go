@@ -1,4 +1,4 @@
-package master
+package server
 
 import (
 	"fmt"
@@ -18,7 +18,7 @@ type NoEnoughResources struct {
 }
 
 // EnableNode inserts or enables a worker node.
-func (m *Master) EnableNode(node *models.Node) error {
+func (m *Main) EnableNode(node *models.Node) error {
 	maxCPU, maxRAMGb, err := GetNodeResources(node)
 	if err != nil {
 		return err
@@ -43,7 +43,7 @@ func (m *Master) EnableNode(node *models.Node) error {
 
 // DisableNode updates node availability removing usage information.
 // Cancel argument will cancels remote tasks and puts them back to queue.
-func (m *Master) DisableNode(host string, cancel bool) error {
+func (m *Main) DisableNode(host string, cancel bool) error {
 	node, err := m.DB.GetNode(host)
 	if err != nil {
 		return err
@@ -80,7 +80,7 @@ func (m *Master) DisableNode(host string, cancel bool) error {
 
 // ListNodes returns worker nodes (disabled included).
 // Set active to return active (enabled) or disable nodes.
-func (m *Master) ListNodes(active *bool) ([]*models.Node, error) {
+func (m *Main) ListNodes(active *bool) ([]*models.Node, error) {
 	return m.DB.ListNodes(active)
 }
 
@@ -88,7 +88,7 @@ func (m *Master) ListNodes(active *bool) ([]*models.Node, error) {
 // If there is no active node it returns NoActiveNodes error.
 // If there is some active node but none of them is able to process then it returns NoEnoughResources error.
 // Once found a node it will update in database.
-func (m *Master) RequestNode(resources *models.Resources) (*models.Node, error) {
+func (m *Main) RequestNode(resources *models.Resources) (*models.Node, error) {
 	// GetTask active computing nodes.
 	active := true
 	nodes, err := m.DB.ListNodes(&active)
@@ -130,7 +130,7 @@ func (m *Master) RequestNode(resources *models.Resources) (*models.Node, error) 
 }
 
 // UpdateNodesWorkload gets active tasks (Initializing or Running) and update node usage.
-func (m *Master) UpdateNodesWorkload(nodes []*models.Node) error {
+func (m *Main) UpdateNodesWorkload(nodes []*models.Node) error {
 	usage := make(map[string]*models.Usage)
 	tasks, err := m.DB.ListTasks(0, 0, models.Full, nil, []models.State{models.Initializing, models.Running})
 	if err != nil {
@@ -158,9 +158,9 @@ func (m *Master) UpdateNodesWorkload(nodes []*models.Node) error {
 	return nil
 }
 
-func (m *Master) enqueueTask(task *models.Task) {
+func (m *Main) enqueueTask(task *models.Task) {
 	task.State = models.Queued
-	task.Logs = []*models.Log{&models.Log{}}
+	task.Logs = []*models.Log{}
 	task.Host = ""
 	task.Metrics = nil
 	if err := m.DB.UpdateTask(task); err != nil {

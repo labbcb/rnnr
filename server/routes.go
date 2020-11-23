@@ -1,4 +1,4 @@
-package master
+package server
 
 import (
 	"encoding/json"
@@ -12,7 +12,7 @@ import (
 )
 
 // Register binds endpoints for node management
-func (m *Master) register() {
+func (m *Main) register() {
 	m.Router.HandleFunc("/v1/nodes", m.handleListNodes()).Methods(http.MethodGet)
 	m.Router.HandleFunc("/v1/nodes", m.handleEnableNode()).Methods(http.MethodPost)
 	m.Router.HandleFunc("/v1/nodes/{id}", m.handleGetNode()).Methods(http.MethodGet)
@@ -25,7 +25,7 @@ func (m *Master) register() {
 	m.Router.HandleFunc("/v1/tasks/service-info", m.handleGetServiceInfo()).Methods(http.MethodGet)
 }
 
-func (m *Master) handleListNodes() http.HandlerFunc {
+func (m *Main) handleListNodes() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		v := r.URL.Query()
 		active, _ := strconv.ParseBool(v.Get("active"))
@@ -51,7 +51,7 @@ func (m *Master) handleListNodes() http.HandlerFunc {
 	}
 }
 
-func (m *Master) handleEnableNode() http.HandlerFunc {
+func (m *Main) handleEnableNode() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var node models.Node
 		if err := json.NewDecoder(r.Body).Decode(&node); err != nil {
@@ -78,7 +78,7 @@ func (m *Master) handleEnableNode() http.HandlerFunc {
 	}
 }
 
-func (m *Master) handleGetNode() http.HandlerFunc {
+func (m *Main) handleGetNode() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := mux.Vars(r)["id"]
 		node, err := m.DB.GetNode(id)
@@ -98,7 +98,7 @@ func (m *Master) handleGetNode() http.HandlerFunc {
 	}
 }
 
-func (m *Master) handleDisableNode() http.HandlerFunc {
+func (m *Main) handleDisableNode() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var cancel bool
 		if err := json.NewDecoder(r.Body).Decode(&cancel); err != nil {
@@ -117,7 +117,7 @@ func (m *Master) handleDisableNode() http.HandlerFunc {
 	}
 }
 
-func (m *Master) handleCreateTask() http.HandlerFunc {
+func (m *Main) handleCreateTask() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var task models.Task
 		if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
@@ -142,7 +142,7 @@ func (m *Master) handleCreateTask() http.HandlerFunc {
 	}
 }
 
-func (m *Master) handleGetTask() http.HandlerFunc {
+func (m *Main) handleGetTask() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := mux.Vars(r)["id"]
 		task, err := m.GetTask(id)
@@ -156,7 +156,7 @@ func (m *Master) handleGetTask() http.HandlerFunc {
 	}
 }
 
-func (m *Master) handleListTasks() http.HandlerFunc {
+func (m *Main) handleListTasks() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		v := r.URL.Query()
 		namePrefix := v.Get("namePrefix")
@@ -184,7 +184,7 @@ func (m *Master) handleListTasks() http.HandlerFunc {
 	}
 }
 
-func (m *Master) handleCancelTask() http.HandlerFunc {
+func (m *Main) handleCancelTask() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := mux.Vars(r)["id"]
 		if err := m.CancelTask(id); err != nil {
@@ -198,7 +198,7 @@ func (m *Master) handleCancelTask() http.HandlerFunc {
 	}
 }
 
-func (m *Master) handleGetServiceInfo() http.HandlerFunc {
+func (m *Main) handleGetServiceInfo() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		encodeJSON(w, m.ServiceInfo)
 	}

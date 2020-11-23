@@ -3,22 +3,22 @@
 *RNNR* is a bioinformatics task processing system for distributed computing environments.
 It was designed to work with a workflow management systems, such as [Cromwell](https://github.com/broadinstitute/cromwell) and [Nextflow](https://www.nextflow.io/), through the [Task Execution Service (TES) API](https://github.com/ga4gh/task-execution-schemas).
 The workflow manager submits tasks to RNNR that distributes the processing load among computational nodes connected in a local network.
-The system is composed of the *Master* instance and one or more *Worker* instances.
+The system is composed of the *Main* instance and one or more *Worker* instances.
 A distributed file system (NFS for example) is required.
 
 > Source code is available at <https://github.com/labbcb/rnnr>
 
 ## Getting started
 
-Run RNNR master server.
+Run RNNR main server.
 Requires MongoDB server.
-The master server and worker instances do not manage any workflow or task files.
+The main server and worker instances do not manage any workflow or task files.
 
 ```bash
-rnnr master
+rnnr main
 ```
 
-RNNR master server endpoint is <http://localhost:8080/v1/tasks>.
+RNNR main server endpoint is <http://localhost:8080/v1/tasks>.
 
 Run RNNR worker server. Requires Docker server.
 
@@ -76,11 +76,11 @@ All computing server mounts NFS directory using same path (`/home/nfs`).
 This is very important for Cromwell to create hard links and generate task command. 
 
 All computing servers have Docker installed.
-One compute server runs Cromwell and RNNR master server instances including databases (hostname `master`).
+One compute server runs Cromwell and RNNR main server instances including databases (hostname `main`).
 This server will not execute tasks because Cromwell instance uses lot of memory when executing complex workflows.
 The other 4 compute servers run RNNR worker server instances (hostname `worker1`, `worker2`, `worker3`, `worker4`).
 
-First we have to deploy RNNR master server.
+First we have to deploy RNNR main server.
 
 ```bash
 docker network create rnnr
@@ -100,7 +100,7 @@ docker container run \
     --publish 8080:8080 \
     --network rnnr \
     welliton/rnnr:latest \
-    master --database mongodb://rnnr-db:27017
+    main --database mongodb://rnnr-db:27017
 ```
 
 > It creates `rnnr` network for communication between RNNR and MongoDB;
@@ -113,7 +113,7 @@ See [examples/cromwell-docker.yml](examples/cromwell-docker.conf) for example.
 It set Cromwell workflow logs to `/home/nfs/tmp/cromwell-workflow-logs` and workflow root to `/home/nfs/tmp/cromwell-executions`.
 Also set URL of MySQL to `jdbc:mysql://cromwell-db/cromwell?rewriteBatchedStatements=true`, where `cromwell-db` is the name of MySQL container.
 The actor factory `cromwell.backend.impl.tes.TesBackendLifecycleActorFactory` tells Cromwell to use TES backend.
-Endpoint `http://master:8080/v1/tasks` is the RNNR master endpoint, where `master` is the hostname of the server that runs RNNR master. 
+Endpoint `http://main:8080/v1/tasks` is the RNNR main endpoint, where `main` is the hostname of the server that runs RNNR main. 
 We copy this file to `/etc/crowmell.conf`.
 
 Next deploy Cromwell in server mode.
@@ -150,7 +150,7 @@ docker run \
 > We have tested Cromwell release version 48.
 
 You may notice that these service don't require Docker at all.
-Cromwell delegates tasks to RNNR master which remotely runs them at active worker nodes.
+Cromwell delegates tasks to RNNR main which remotely runs them at active worker nodes.
 However, deploying these services as Docker container simplifies system management.
 
 Now, at each computing node, start a RNNR worker instance. **Docker is a requirement.**
@@ -169,21 +169,21 @@ docker container run \
 
 > Create `rnnr` container exposing port `50051` and mounting Docker socket (`/var/run/docker.sock`).
 
-Finally, we add the worker nodes to master server.
+Finally, we add the worker nodes to main server.
 For each server, we set -2 CPU cores less memory as maximum computing resources.
 Since RNNR is not aware of external process, this avoids any over consumption.  
 
 ```bash
-rnnr enable --host master worker1 --cpu 14 --ram 180
-rnnr enable --host master worker2 --cpu 14 --ram 130
-rnnr enable --host master worker3 --cpu 48 --ram 120
-rnnr enable --host master worker4 --cpu 48 --ram 70
+rnnr enable --host main worker1 --cpu 14 --ram 180
+rnnr enable --host main worker2 --cpu 14 --ram 130
+rnnr enable --host main worker3 --cpu 48 --ram 120
+rnnr enable --host main worker4 --cpu 48 --ram 70
 ```
 
 Done. Cromwell will be available to run submitted workflows.
 
 ```bash
-java -jar cromwell-48.jar submit --host http://master:8000 examples/hello.wdl
+java -jar cromwell-48.jar submit --host http://main:8000 examples/hello.wdl
 ```
 
 ## Command line
@@ -211,7 +211,7 @@ Direct dependencies
 - [mux](https://github.com/gorilla/mux) for routing requests
 - [uuid](https://github.com/google/uuid) for unique id generation
 - [docker](https://pkg.go.dev/github.com/docker/docker/client) for container management
-- [grpc](https://pkg.go.dev/mod/google.golang.org/grpc) for master-worker communication
+- [grpc](https://pkg.go.dev/mod/google.golang.org/grpc) for main-worker communication
 
 Generate Go code from ProtoBuffer file
 

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+
 	"github.com/labbcb/rnnr/client"
 	"github.com/labbcb/rnnr/models"
 	"github.com/spf13/cobra"
@@ -14,7 +15,7 @@ var cancelCmd = &cobra.Command{
 	Use:     "cancel [--all] [id]...",
 	Aliases: []string{"abort", "stop"},
 	Short:   "Cancel one or more active tasks",
-	Long: "This command tells master server to stop active tasks.\n" +
+	Long: "This command tells main server to stop active tasks.\n" +
 		"--all flag will cancel all active tasks!\n" +
 		"It will print IDs of successfully cancelled tasks.",
 	Run: func(cmd *cobra.Command, args []string) {

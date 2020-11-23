@@ -4,7 +4,7 @@ import (
 	"net"
 
 	"github.com/labbcb/rnnr/pb"
-	"github.com/labbcb/rnnr/worker"
+	"github.com/labbcb/rnnr/server"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
@@ -25,7 +25,7 @@ var workerCmd = &cobra.Command{
 			FullTimestamp: true,
 		})
 
-		w, err := worker.New(cpuCores, ramGb)
+		w, err := server.NewWorker(cpuCores, ramGb)
 		exitOnErr(err)
 
 		lis, err := net.Listen("tcp", ":"+port)

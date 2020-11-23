@@ -1,5 +1,4 @@
-// Package worker implements RNNR worker logic.
-package worker
+package server
 
 import (
 	"context"
@@ -17,9 +16,9 @@ type Worker struct {
 	Docker *Docker
 }
 
-// New creates a Worker.
-func New(cpuCores int32, ramGb float64) (*Worker, error) {
-	conn, err := Connect()
+// NewWorker creates a Worker.
+func NewWorker(cpuCores int32, ramGb float64) (*Worker, error) {
+	conn, err := DockerConnect()
 	if err != nil {
 		return nil, err
 	}
