@@ -23,7 +23,7 @@ func (m *Main) CreateTask(t *models.Task) error {
 
 	t.ID = uuid.New().String()
 	t.State = models.Queued
-	t.Logs = []*models.Log{}
+	t.Logs = []*models.Log{{}}
 	if t.Resources.CPUCores == 0 {
 		t.Resources.CPUCores = 1
 	}
