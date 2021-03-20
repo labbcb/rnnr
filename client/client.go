@@ -25,7 +25,7 @@ const contentType = "application/json"
 //
 // Full returns all fields.
 func ListTasks(host string, pageSize int, pageToken string, view models.View, nodes []string, states []models.State) (*models.ListTasksResponse, error) {
-	u, err := url.Parse(host + "/v1/tasks")
+	u, err := url.Parse(host + "/ga4gh/tes/v1/tasks")
 	if err != nil {
 		return nil, err
 	}
@@ -64,8 +64,17 @@ func ListTasks(host string, pageSize int, pageToken string, view models.View, no
 }
 
 // GetTask retrieves task information given its ID.
-func GetTask(host, id string) (*models.Task, error) {
-	resp, err := http.Get(host + "/v1/tasks/" + id)
+func GetTask(host, id string, view models.View) (*models.Task, error) {
+	v := url.Values{}
+	v.Set("view", string(view))
+
+	u, err := url.Parse(host + "/ga4gh/tes/v1/tasks/" + id)
+	if err != nil {
+		return nil, err
+	}
+	u.RawQuery = v.Encode()
+
+	resp, err := http.Get(u.String())
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +97,7 @@ func GetTask(host, id string) (*models.Task, error) {
 
 // CancelTask cancels task by its ID.
 func CancelTask(host, id string) error {
-	resp, err := http.Post(host+"/v1/tasks/"+id+":cancel", "application/json", nil)
+	resp, err := http.Post(host+"/ga4gh/tes/v1/tasks/"+id+":cancel", "application/json", nil)
 	if err != nil {
 		return err
 	}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/labbcb/rnnr/models"
 	log "github.com/sirupsen/logrus"
@@ -18,11 +19,11 @@ func (m *Main) register() {
 	m.Router.HandleFunc("/v1/nodes/{id}", m.handleGetNode()).Methods(http.MethodGet)
 	m.Router.HandleFunc("/v1/nodes/{id}:disable", m.handleDisableNode()).Methods(http.MethodPost)
 
-	m.Router.HandleFunc("/v1/tasks", m.handleListTasks()).Methods(http.MethodGet)
-	m.Router.HandleFunc("/v1/tasks", m.handleCreateTask()).Methods(http.MethodPost)
-	m.Router.HandleFunc("/v1/tasks/{id}", m.handleGetTask()).Methods(http.MethodGet)
-	m.Router.HandleFunc("/v1/tasks/{id}:cancel", m.handleCancelTask()).Methods(http.MethodPost)
-	m.Router.HandleFunc("/v1/tasks/service-info", m.handleGetServiceInfo()).Methods(http.MethodGet)
+	m.Router.HandleFunc("/ga4gh/tes/v1/tasks", m.handleListTasks()).Methods(http.MethodGet)
+	m.Router.HandleFunc("/ga4gh/tes/v1/tasks", m.handleCreateTask()).Methods(http.MethodPost)
+	m.Router.HandleFunc("/ga4gh/tes/v1/tasks/{id}", m.handleGetTask()).Methods(http.MethodGet)
+	m.Router.HandleFunc("/ga4gh/tes/v1/tasks/{id}:cancel", m.handleCancelTask()).Methods(http.MethodPost)
+	m.Router.HandleFunc("/ga4gh/tes/v1/service-info", m.handleGetServiceInfo()).Methods(http.MethodGet)
 }
 
 func (m *Main) handleListNodes() http.HandlerFunc {
@@ -145,7 +146,15 @@ func (m *Main) handleCreateTask() http.HandlerFunc {
 func (m *Main) handleGetTask() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := mux.Vars(r)["id"]
-		task, err := m.GetTask(id)
+		v := r.URL.Query()
+
+		viewString := v.Get("view")
+		if viewString == "" {
+			viewString = "MINIMAL"
+		}
+		view := models.View(strings.ToUpper(viewString))
+
+		task, err := m.GetTask(id, view)
 		if err != nil {
 			log.WithFields(log.Fields{"id": id, "error": err}).Error("Unable to get task.")
 			http.Error(w, err.Error(), http.StatusNotFound)
@@ -159,10 +168,15 @@ func (m *Main) handleGetTask() http.HandlerFunc {
 func (m *Main) handleListTasks() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		v := r.URL.Query()
-		namePrefix := v.Get("namePrefix")
-		pageSize, _ := strconv.ParseInt(v.Get("pageSize"), 10, 64)
-		pageToken, _ := strconv.ParseInt(v.Get("pageToken"), 10, 64)
-		view := models.View(v.Get("view"))
+		namePrefix := v.Get("name_prefix")
+		pageSize, _ := strconv.ParseInt(v.Get("page_size"), 10, 64)
+		pageToken, _ := strconv.ParseInt(v.Get("page_token"), 10, 64)
+
+		viewString := v.Get("view")
+		if viewString == "" {
+			viewString = "MINIMAL"
+		}
+		view := models.View(strings.ToUpper(viewString))
 
 		var states []models.State
 		for _, state := range v["state"] {

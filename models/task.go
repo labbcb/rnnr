@@ -103,11 +103,11 @@ type Executor struct {
 
 // ExecutorLog represents processing times and logs of an executor
 type ExecutorLog struct {
-	StartTime time.Time `json:"start_time"` // Time the executor started
-	EndTime   time.Time `json:"end_time"`   // Time the executor ended
-	Stdout    string    `json:"stdout"`     // Stdout content
-	Stderr    string    `json:"stderr"`     // Stderr content
-	ExitCode  int32     `json:"exit_code"`  // Exit code
+	ExitCode  int32     `json:"exit_code"`            // Exit code
+	StartTime time.Time `json:"start_time,omitempty"` // Time the executor started
+	EndTime   time.Time `json:"end_time,omitempty"`   // Time the executor ended
+	Stdout    string    `json:"stdout,omitempty"`     // Stdout content
+	Stderr    string    `json:"stderr,omitempty"`     // Stderr content
 }
 
 // OutputFileLog represents a log file
@@ -117,8 +117,8 @@ type OutputFileLog struct {
 	SizeBytes string `json:"size_bytes"`
 }
 
-// Log represents processing times and logs of a task
-type Log struct {
+// TaskLog represents processing times and logs of a task
+type TaskLog struct {
 	// ExecutorLogs for each executor
 	ExecutorLogs []*ExecutorLog `json:"logs,omitempty"`
 	// Arbitrary logging metadata included by the implementation
@@ -146,17 +146,17 @@ type Metrics struct {
 // Task is a collection of command to be executed to process data
 type Task struct {
 	ID          string            `json:"id" bson:"_id"`
+	State       State             `json:"state"`
 	Name        string            `json:"name,omitempty"`
 	Description string            `json:"description,omitempty"`
 	Created     *time.Time        `json:"creation_time,omitempty"`
-	State       State             `json:"state"`
 	Resources   *Resources        `json:"resources,omitempty"`
 	Executors   []Executor        `json:"executors,omitempty"`
 	Inputs      []*Input          `json:"inputs,omitempty"`
 	Outputs     []*Output         `json:"outputs,omitempty"`
 	Volumes     []string          `json:"volumes,omitempty"`
 	Tags        map[string]string `json:"tags,omitempty"`
-	Logs        []*Log            `json:"logs,omitempty"`
+	Logs        []*TaskLog        `json:"logs,omitempty"`
 
 	// RNNR specific fields.
 	Host    string   `json:"host,omitempty"`

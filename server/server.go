@@ -23,7 +23,7 @@ func (m *Main) CreateTask(t *models.Task) error {
 
 	t.ID = uuid.New().String()
 	t.State = models.Queued
-	t.Logs = []*models.Log{{}}
+	t.Logs = []*models.TaskLog{{}}
 	if t.Resources.CPUCores == 0 {
 		t.Resources.CPUCores = 1
 	}
@@ -31,8 +31,8 @@ func (m *Main) CreateTask(t *models.Task) error {
 }
 
 // GetTask returns a task by its ID.
-func (m *Main) GetTask(id string) (*models.Task, error) {
-	t, err := m.DB.GetTask(id)
+func (m *Main) GetTask(id string, view models.View) (*models.Task, error) {
+	t, err := m.DB.GetTask(id, view)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (m *Main) GetTask(id string) (*models.Task, error) {
 
 // CancelTask cancels a task by its ID.
 func (m *Main) CancelTask(id string) error {
-	task, err := m.GetTask(id)
+	task, err := m.GetTask(id, models.Full)
 	if err != nil {
 		return err
 	}

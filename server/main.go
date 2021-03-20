@@ -30,9 +30,17 @@ func NewMain(database string, sleepTime time.Duration) (*Main, error) {
 		Router: mux.NewRouter(),
 		DB:     connection,
 		ServiceInfo: &models.ServiceInfo{
-			Name:    "rnnr",
-			Doc:     "Distributed Task Executor for Genomics Research (https://bcblab.org/rnnr).",
-			Storage: []string{"NFS"},
+			ID:   "rnnr",
+			Name: "RNNR",
+			Type: &models.ServiceType{
+				Group:    "org.bcblab",
+				Artifact: "tes",
+				Version:  "1.0.0",
+			},
+			Description: "Distributed task execution system for scaling reproducible workflows",
+			Storage:     []string{"Local", "NFS"},
+			UpdatedAt:   time.Now(),
+			Version:     "1.3.0",
 		},
 	}
 	main.register()

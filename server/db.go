@@ -43,9 +43,28 @@ func (d *DB) SaveTask(t *models.Task) error {
 }
 
 // GetTask finds a task by its ID.
-func (d *DB) GetTask(id string) (*models.Task, error) {
+func (d *DB) GetTask(id string, view models.View) (*models.Task, error) {
+	opts := options.FindOne()
+
+	var projection bson.M
+	switch view {
+	case models.Minimal:
+		projection = bson.M{
+			"_id":   1,
+			"state": 1,
+		}
+	case models.Basic:
+		projection = bson.M{
+			"Logs.ExecutorLog.Stdout": 0,
+			"Logs.ExecutorLog.Stderr": 0,
+			"Input.Content":           0,
+			"Logs.SystemLogs":         0,
+		}
+	}
+	opts.SetProjection(projection)
+
 	var t models.Task
-	if err := d.client.Database(d.database).Collection(TaskCollection).FindOne(context.Background(), bson.M{"_id": id}).Decode(&t); err != nil {
+	if err := d.client.Database(d.database).Collection(TaskCollection).FindOne(context.Background(), bson.M{"_id": id}, opts).Decode(&t); err != nil {
 		return nil, err
 	}
 	return &t, nil

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/labbcb/rnnr/client"
+	"github.com/labbcb/rnnr/models"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -16,7 +17,7 @@ var logsCmd = &cobra.Command{
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		host := viper.GetString("host")
-		t, err := client.GetTask(host, args[0])
+		t, err := client.GetTask(host, args[0], models.Full)
 		exitOnErr(err)
 
 		if t.Active() {

@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/labbcb/rnnr/client"
+	"github.com/labbcb/rnnr/models"
 	"github.com/spf13/cobra"
 )
 
@@ -19,7 +20,7 @@ var viewCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		host := viper.GetString("host")
 		for _, id := range args {
-			task, err := client.GetTask(host, id)
+			task, err := client.GetTask(host, id, models.Full)
 			if err != nil {
 				message("%v\n", err)
 				continue

@@ -169,7 +169,7 @@ func (m *Main) UpdateNodesWorkload(nodes []*models.Node) error {
 
 func (m *Main) enqueueTask(task *models.Task) {
 	task.State = models.Queued
-	task.Logs = []*models.Log{{}}
+	task.Logs = []*models.TaskLog{{}}
 	task.Host = ""
 	task.Metrics = nil
 	if err := m.DB.UpdateTask(task); err != nil {
