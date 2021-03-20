@@ -169,10 +169,7 @@ func (m *Main) handleListTasks() http.HandlerFunc {
 			states = append(states, models.State(state))
 		}
 
-		var nodes []string
-		for _, state := range v["node"] {
-			nodes = append(nodes, state)
-		}
+		nodes := v["node"]
 
 		tasks, err := m.ListTasks(namePrefix, pageSize, pageToken, view, nodes, states)
 		if err != nil {

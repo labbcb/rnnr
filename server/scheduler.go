@@ -18,18 +18,27 @@ type NoEnoughResources struct {
 }
 
 // EnableNode inserts or enables a worker node.
+// Use the current computational resources of the node if it had not been defined.
 func (m *Main) EnableNode(node *models.Node) error {
-	maxCPU, maxRAMGb, err := GetNodeResources(node)
+	info, err := GetNodeResources(node)
 	if err != nil {
 		return err
 	}
 
-	if node.CPUCores == 0 || node.CPUCores > maxCPU {
-		node.CPUCores = maxCPU
+	if node.CPUCores == 0 {
+		node.CPUCores = info.CpuCores
 	}
 
-	if node.RAMGb == 0 || node.RAMGb > maxRAMGb {
-		node.RAMGb = maxRAMGb
+	if node.RAMGb == 0 {
+		node.RAMGb = info.RamGb
+	}
+
+	if node.CPUCores > info.IdentifiedCpuCores {
+		log.Warnf("Defined number of CPU cores (%d) is greater than identified (%d).", node.CPUCores, info.IdentifiedCpuCores)
+	}
+
+	if node.RAMGb > info.IdentifiedRamGb {
+		log.Warnf("Defined number of RAM (%.2f GB) is greater than identified (%.2f GB).", node.RAMGb, info.IdentifiedRamGb)
 	}
 
 	node.Active = true

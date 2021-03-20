@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"time"
 
 	"github.com/labbcb/rnnr/models"
@@ -25,7 +26,7 @@ type DB struct {
 
 // MongoConnect creates a MongoDB client.
 func MongoConnect(uri, database string) (*DB, error) {
-	c, err := mongo.Connect(nil, options.Client().ApplyURI(uri))
+	c, err := mongo.Connect(context.Background(), options.Client().ApplyURI(uri))
 	if err != nil {
 		return nil, err
 	}
@@ -37,14 +38,14 @@ func MongoConnect(uri, database string) (*DB, error) {
 func (d *DB) SaveTask(t *models.Task) error {
 	now := time.Now()
 	t.Created = &now
-	_, err := d.client.Database(d.database).Collection(TaskCollection).InsertOne(nil, t)
+	_, err := d.client.Database(d.database).Collection(TaskCollection).InsertOne(context.Background(), t)
 	return err
 }
 
 // GetTask finds a task by its ID.
 func (d *DB) GetTask(id string) (*models.Task, error) {
 	var t models.Task
-	if err := d.client.Database(d.database).Collection(TaskCollection).FindOne(nil, bson.M{"_id": id}).Decode(&t); err != nil {
+	if err := d.client.Database(d.database).Collection(TaskCollection).FindOne(context.Background(), bson.M{"_id": id}).Decode(&t); err != nil {
 		return nil, err
 	}
 	return &t, nil
@@ -54,7 +55,7 @@ func (d *DB) GetTask(id string) (*models.Task, error) {
 // It will set Task.Updated to current local time.
 func (d *DB) UpdateTask(t *models.Task) error {
 	return d.client.Database(d.database).Collection(TaskCollection).
-		FindOneAndReplace(nil, bson.M{"_id": t.ID}, &t, options.FindOneAndReplace()).Err()
+		FindOneAndReplace(context.Background(), bson.M{"_id": t.ID}, &t, options.FindOneAndReplace()).Err()
 }
 
 // ListTasks retrieves tasks that match given worker nodes and states.
@@ -81,9 +82,9 @@ func (d *DB) ListTasks(limit, skip int64, view models.View, nodes []string, stat
 		filters = append(filters, bson.M{"state": bson.M{"$in": states}})
 	}
 
-	filter := bson.D{}
+	filter := bson.M{}
 	if len(filters) > 0 {
-		filter = bson.D{{"$and", filters}}
+		filter = bson.M{"$and": filters}
 	}
 
 	var projection bson.M
@@ -103,18 +104,18 @@ func (d *DB) ListTasks(limit, skip int64, view models.View, nodes []string, stat
 	}
 	opts.SetProjection(projection)
 
-	cursor, err := d.client.Database(d.database).Collection(TaskCollection).Find(nil, filter, opts)
+	cursor, err := d.client.Database(d.database).Collection(TaskCollection).Find(context.Background(), filter, opts)
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
-		if err := cursor.Close(nil); err != nil {
+		if err := cursor.Close(context.Background()); err != nil {
 			log.Fatal(err)
 		}
 	}()
 
 	var tasks []*models.Task
-	if err := cursor.All(nil, &tasks); err != nil {
+	if err := cursor.All(context.Background(), &tasks); err != nil {
 		return nil, err
 	}
 	return tasks, nil
@@ -128,18 +129,18 @@ func (d *DB) ListNodes(active *bool) ([]*models.Node, error) {
 		filter = bson.M{"active": active}
 	}
 
-	cursor, err := d.client.Database(d.database).Collection(NodeCollection).Find(nil, filter)
+	cursor, err := d.client.Database(d.database).Collection(NodeCollection).Find(context.Background(), filter)
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
-		if err := cursor.Close(nil); err != nil {
+		if err := cursor.Close(context.Background()); err != nil {
 			log.Fatal(err)
 		}
 	}()
 
 	var ns []*models.Node
-	if err := cursor.All(nil, &ns); err != nil {
+	if err := cursor.All(context.Background(), &ns); err != nil {
 		return nil, err
 	}
 	return ns, nil
@@ -149,7 +150,7 @@ func (d *DB) ListNodes(active *bool) ([]*models.Node, error) {
 func (d *DB) GetNode(host string) (*models.Node, error) {
 	var n models.Node
 	if err := d.client.Database(d.database).Collection(NodeCollection).
-		FindOne(nil, bson.M{"_id": host}).Decode(&n); err != nil {
+		FindOne(context.Background(), bson.M{"_id": host}).Decode(&n); err != nil {
 		return nil, err
 	}
 	return &n, nil
@@ -163,7 +164,7 @@ func (d *DB) AddNode(n *models.Node) error {
 	case nil:
 		return d.UpdateNode(n)
 	case mongo.ErrNoDocuments:
-		_, err := d.client.Database(d.database).Collection(NodeCollection).InsertOne(nil, n)
+		_, err := d.client.Database(d.database).Collection(NodeCollection).InsertOne(context.Background(), n)
 		return err
 	default:
 		return err
@@ -173,5 +174,5 @@ func (d *DB) AddNode(n *models.Node) error {
 // UpdateNode updates node information.
 func (d *DB) UpdateNode(n *models.Node) error {
 	return d.client.Database(d.database).Collection(NodeCollection).
-		FindOneAndReplace(nil, bson.M{"_id": n.Host}, n, options.FindOneAndReplace()).Err()
+		FindOneAndReplace(context.Background(), bson.M{"_id": n.Host}, n, options.FindOneAndReplace()).Err()
 }

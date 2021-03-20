@@ -2,13 +2,10 @@ package server
 
 import (
 	"context"
-	"time"
 
-	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/labbcb/rnnr/models"
-	"github.com/labbcb/rnnr/pb"
+	"github.com/labbcb/rnnr/proto"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -16,10 +13,10 @@ import (
 )
 
 // GetNodeResources gets node resource information.
-func GetNodeResources(node *models.Node) (int32, float64, error) {
+func GetNodeResources(node *models.Node) (*proto.Info, error) {
 	conn, err := grpc.Dial(node.Address(), grpc.WithInsecure())
 	if err != nil {
-		return 0, 0, err
+		return nil, err
 	}
 	defer func() {
 		if err := conn.Close(); err != nil {
@@ -27,11 +24,11 @@ func GetNodeResources(node *models.Node) (int32, float64, error) {
 		}
 	}()
 
-	info, err := pb.NewWorkerClient(conn).GetInfo(context.Background(), &empty.Empty{})
+	info, err := proto.NewWorkerClient(conn).GetInfo(context.Background(), &empty.Empty{})
 	if err != nil {
-		return 0, 0, err
+		return nil, err
 	}
-	return info.CpuCores, info.RamGb, nil
+	return info, nil
 }
 
 // RemoteRun remotely runs a task as a container.
@@ -48,7 +45,7 @@ func RemoteRun(task *models.Task, address string) error {
 	}()
 
 	// convert a task to a container and remotely runs it
-	_, err = pb.NewWorkerClient(conn).RunContainer(context.Background(), asContainer(task))
+	_, err = proto.NewWorkerClient(conn).RunContainer(context.Background(), asContainer(task))
 	if status.Code(err) == codes.Unavailable {
 		return &NetworkError{err}
 	}
@@ -67,7 +64,7 @@ func RemoteCheck(task *models.Task, address string) error {
 		}
 	}()
 
-	state, err := pb.NewWorkerClient(conn).CheckContainer(context.Background(), asContainer(task))
+	state, err := proto.NewWorkerClient(conn).CheckContainer(context.Background(), asContainer(task))
 	if err != nil {
 		if status.Code(err) == codes.Unavailable {
 			return &NetworkError{err}
@@ -109,15 +106,15 @@ func RemoteCancel(task *models.Task, node *models.Node) error {
 		}
 	}()
 
-	_, err = pb.NewWorkerClient(conn).StopContainer(context.Background(), asContainer(task))
+	_, err = proto.NewWorkerClient(conn).StopContainer(context.Background(), asContainer(task))
 	if status.Code(err) == codes.Unavailable {
 		return &NetworkError{err}
 	}
 	return err
 }
 
-func asContainer(t *models.Task) *pb.Container {
-	return &pb.Container{
+func asContainer(t *models.Task) *proto.Container {
+	return &proto.Container{
 		Id:      t.ID,
 		Image:   t.Executors[0].Image,
 		Command: t.Executors[0].Command,
@@ -128,10 +125,10 @@ func asContainer(t *models.Task) *pb.Container {
 	}
 }
 
-func outputs(os []*models.Output) []*pb.Volume {
-	var vs []*pb.Volume
+func outputs(os []*models.Output) []*proto.Volume {
+	var vs []*proto.Volume
 	for _, o := range os {
-		vs = append(vs, &pb.Volume{
+		vs = append(vs, &proto.Volume{
 			HostPath:      o.URL,
 			ContainerPath: o.Path,
 		})
@@ -140,10 +137,10 @@ func outputs(os []*models.Output) []*pb.Volume {
 	return vs
 }
 
-func inputs(is []*models.Input) []*pb.Volume {
-	var vs []*pb.Volume
+func inputs(is []*models.Input) []*proto.Volume {
+	var vs []*proto.Volume
 	for _, i := range is {
-		vs = append(vs, &pb.Volume{
+		vs = append(vs, &proto.Volume{
 			HostPath:      i.URL,
 			ContainerPath: i.Path,
 		})
@@ -152,18 +149,13 @@ func inputs(is []*models.Input) []*pb.Volume {
 	return vs
 }
 
-func executorLogs(state *pb.State) []*models.ExecutorLog {
+func executorLogs(state *proto.State) []*models.ExecutorLog {
 	logs := &models.ExecutorLog{
-		StartTime: asTime(state.Start),
-		EndTime:   asTime(state.End),
+		StartTime: state.Start.AsTime(),
+		EndTime:   state.End.AsTime(),
 		Stdout:    state.Stdout,
 		Stderr:    state.Stderr,
 		ExitCode:  state.ExitCode,
 	}
 	return []*models.ExecutorLog{logs}
-}
-
-func asTime(p *timestamp.Timestamp) time.Time {
-	t, _ := ptypes.Timestamp(p)
-	return t
 }

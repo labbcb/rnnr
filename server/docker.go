@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/labbcb/rnnr/pb"
+	"github.com/labbcb/rnnr/proto"
 	log "github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -37,7 +37,7 @@ func DockerConnect() (*Docker, error) {
 }
 
 // Run runs a container
-func (d *Docker) Run(ctx context.Context, container *pb.Container) error {
+func (d *Docker) Run(ctx context.Context, container *proto.Container) error {
 	if err := d.pullImage(container.Image, ioutil.Discard); err != nil {
 		log.WithError(err).WithField("image", container.Image).Warn("Unable to pull image.")
 	}
@@ -63,13 +63,13 @@ func (d *Docker) Stop(ctx context.Context, id string) error {
 }
 
 // Check verifies if container is still running.
-func (d *Docker) Check(ctx context.Context, container *pb.Container) (*pb.State, error) {
+func (d *Docker) Check(ctx context.Context, container *proto.Container) (*proto.State, error) {
 	resp, err := d.client.ContainerInspect(ctx, container.Id)
 	if err != nil {
 		return nil, err
 	}
 
-	state := pb.State{}
+	state := proto.State{}
 	if resp.State.Running {
 		state.CpuPercent, state.CpuTime, state.Memory = d.getUsage(ctx, container.Id)
 	} else {
@@ -93,8 +93,7 @@ func (d *Docker) RemoveContainer(ctx context.Context, id string) {
 
 func asTimestamp(s string) *timestamp.Timestamp {
 	t, _ := time.Parse(time.RFC3339Nano, s)
-	p, _ := ptypes.TimestampProto(t)
-	return p
+	return timestamppb.New(t)
 }
 
 func (d *Docker) pullImage(image string, w io.Writer) error {
@@ -122,7 +121,7 @@ func (d *Docker) runContainer(ctx context.Context, id, image string, command []s
 		Env:        env,
 	}, &container.HostConfig{
 		Mounts: mounts,
-	}, nil, id)
+	}, nil, nil, id)
 	if err != nil {
 		return err
 	}
@@ -158,7 +157,7 @@ func (d *Docker) getUsage(ctx context.Context, id string) (cpuPercent float64, c
 	return cpuPercent, stats.CPUStats.CPUUsage.TotalUsage, stats.MemoryStats.Stats["rss"]
 }
 
-func mounts(t *pb.Container) []mount.Mount {
+func mounts(t *proto.Container) []mount.Mount {
 	var volumes []mount.Mount
 
 	for _, output := range t.Outputs {

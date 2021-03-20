@@ -31,7 +31,7 @@ func ListTasks(host string, pageSize int, pageToken string, view models.View, no
 	}
 
 	v := url.Values{}
-	v.Set("pageSize", string(pageSize))
+	v.Set("pageSize", fmt.Sprint(pageSize))
 	v.Set("pageToken", pageToken)
 	v.Set("view", string(view))
 	for _, state := range states {

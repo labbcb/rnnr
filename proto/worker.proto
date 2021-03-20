@@ -3,13 +3,15 @@ syntax = "proto3";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
 
-option go_package = ".;pb";
+option go_package = "/proto";
 
-package pb;
+package proto;
 
 message Info {
     int32 cpu_cores = 1;
     double ram_gb = 2;
+    int32 identified_cpu_cores = 3;
+    double identified_ram_gb = 4;
 }
 
 message Volume {

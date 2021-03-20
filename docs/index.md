@@ -216,9 +216,15 @@ Direct dependencies
 Generate Go code from ProtoBuffer file
 
 ```bash
-go get -u google.golang.org/grpc
-go get -u github.com/golang/protobuf/protoc-gen-go
-protoc -I pb --go_out=plugins=grpc:pb pb/worker.proto 
+export GO111MODULE=on
+go get google.golang.org/protobuf/cmd/protoc-gen-go \
+    google.golang.org/grpc/cmd/protoc-gen-go-grpc
+
+protoc --go_out=. \
+    --go_opt=paths=source_relative \
+    --go-grpc_out=. \
+    --go-grpc_opt=paths=source_relative \
+    proto/worker.proto
 ```
 
 Build Docker image and publish to Docker Hub
@@ -226,6 +232,14 @@ Build Docker image and publish to Docker Hub
 ```bash
 docker build -t welliton/rnnr:latest .
 docker push welliton/rnnr:latest
+```
+
+### Development environment
+
+Start MongoDB inside container exposing 27017 TCP port
+
+```bash
+docker container run --rm --publish 27017:27017 mongo:4
 ```
 
 ## Internals
