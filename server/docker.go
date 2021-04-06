@@ -24,16 +24,17 @@ import (
 
 // Docker struct wraps Docker client
 type Docker struct {
-	client *client.Client
+	client  *client.Client
+	volumes []string
 }
 
 // DockerConnect creates a Docker client using environment variables
-func DockerConnect() (*Docker, error) {
+func DockerConnect(volumes []string) (*Docker, error) {
 	c, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil, err
 	}
-	return &Docker{c}, nil
+	return &Docker{c, volumes}, nil
 }
 
 // Run runs a container
@@ -47,7 +48,7 @@ func (d *Docker) Run(ctx context.Context, container *proto.Container) error {
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
 
-	volumes := mounts(container)
+	volumes := d.mounts(container)
 
 	return d.runContainer(ctx, container.Id, container.Image, container.Command, container.WorkDir,
 		env, volumes)
@@ -157,8 +158,12 @@ func (d *Docker) getUsage(ctx context.Context, id string) (cpuPercent float64, c
 	return cpuPercent, stats.CPUStats.CPUUsage.TotalUsage, stats.MemoryStats.Stats["rss"]
 }
 
-func mounts(t *proto.Container) []mount.Mount {
+func (d *Docker) mounts(t *proto.Container) []mount.Mount {
 	var volumes []mount.Mount
+
+	for _, v := range d.volumes {
+		volumes = addVolume(volumes, v, v, false)
+	}
 
 	for _, output := range t.Outputs {
 		volumes = addVolume(volumes, output.HostPath, output.ContainerPath, false)
