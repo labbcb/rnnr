@@ -162,7 +162,12 @@ func (d *Docker) mounts(t *proto.Container) []mount.Mount {
 	var volumes []mount.Mount
 
 	for _, v := range d.volumes {
-		volumes = addVolume(volumes, v, v, false)
+		volumes = append(volumes, mount.Mount{
+			Type:     mount.TypeBind,
+			Source:   v,
+			Target:   v,
+			ReadOnly: false,
+		})
 	}
 
 	for _, output := range t.Outputs {
