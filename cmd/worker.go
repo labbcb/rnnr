@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-var port string
+var port, user, group string
 var cpuCores int32
 var ramGb float64
 var volumes []string
@@ -28,7 +28,7 @@ var workerCmd = &cobra.Command{
 			FullTimestamp: true,
 		})
 
-		w, err := server.NewWorker(cpuCores, ramGb, volumes)
+		w, err := server.NewWorker(cpuCores, ramGb, volumes, user, group)
 		exitOnErr(err)
 
 		if w.Info.CpuCores > w.Info.IdentifiedCpuCores {
@@ -53,5 +53,7 @@ func init() {
 	workerCmd.Flags().Int32Var(&cpuCores, "cpu", 0, "Maximum CPU cores")
 	workerCmd.Flags().Float64Var(&ramGb, "ram", 0, "Maximum memory in gigabytes")
 	workerCmd.Flags().StringArrayVarP(&volumes, "volume", "v", []string{}, "Volumes to mount in containers")
+	workerCmd.Flags().StringVarP(&user, "user", "u", "root", "User name or UID")
+	workerCmd.Flags().StringVarP(&group, "group", "g", "root", "Group name or GID")
 	rootCmd.AddCommand(workerCmd)
 }

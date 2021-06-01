@@ -26,15 +26,17 @@ import (
 type Docker struct {
 	client  *client.Client
 	volumes []string
+	user    string
+	group   string
 }
 
 // DockerConnect creates a Docker client using environment variables
-func DockerConnect(volumes []string) (*Docker, error) {
+func DockerConnect(volumes []string, user, group string) (*Docker, error) {
 	c, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil, err
 	}
-	return &Docker{c, volumes}, nil
+	return &Docker{c, volumes, user, group}, nil
 }
 
 // Run runs a container
@@ -120,6 +122,7 @@ func (d *Docker) runContainer(ctx context.Context, id, image string, command []s
 		Cmd:        command,
 		WorkingDir: workDir,
 		Env:        env,
+		User:       fmt.Sprintf("%s:%s", d.user, d.group),
 	}, &container.HostConfig{
 		Mounts: mounts,
 	}, nil, nil, id)

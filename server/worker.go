@@ -20,8 +20,8 @@ type Worker struct {
 // NewWorker creates a Worker.
 // If cpuCores or ramGb is not defined (equal to 0) it will guess the available resources.
 // It will warn if the defined values are bigger than guessed values.
-func NewWorker(cpuCores int32, ramGb float64, volumes []string) (*Worker, error) {
-	conn, err := DockerConnect(volumes)
+func NewWorker(cpuCores int32, ramGb float64, volumes []string, user, group string) (*Worker, error) {
+	conn, err := DockerConnect(volumes, user, group)
 	if err != nil {
 		return nil, err
 	}
