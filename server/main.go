@@ -40,7 +40,7 @@ func NewMain(database string, sleepTime time.Duration) (*Main, error) {
 			Description: "Distributed task execution system for scaling reproducible workflows",
 			Storage:     []string{"Local", "NFS"},
 			UpdatedAt:   time.Now(),
-			Version:     "1.4.0",
+			Version:     "1.4.1",
 		},
 	}
 	main.register()
